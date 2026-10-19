@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SINCO 2019 y O*NET: catálogo y coincidencias</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <h1>SINCO 2019 &middot; O*NET</h1>
+  <nav>
+    <button id="tab-sinco" class="on">Jerarquía SINCO</button>
+    <button id="tab-onet">Ocupaciones O*NET</button>
+    <button id="tab-meta">Fuentes</button>
+  </nav>
+  <span class="aviso">Solo lectura. Sin scores ni exposición.</span>
+</header>
+
+<main id="v-sinco">
+  <section class="izq">
+    <div class="barra">
+      <input id="q-sinco" type="search" placeholder="Buscar código, título u ocupación ejemplo (p. ej. barista, 4213)">
+      <button id="btn-raiz">Inicio</button>
+    </div>
+    <div id="ruta" class="ruta"></div>
+    <div id="res-sinco" class="resultados" hidden></div>
+    <svg id="sun" viewBox="-300 -300 600 600" role="img" aria-label="Jerarquía SINCO 2019"></svg>
+    <div class="leyenda" id="leyenda"></div>
+  </section>
+  <aside class="der" id="detalle"><p class="vacio">Haga clic en un sector del diagrama. Anillos de dentro hacia fuera: división, grupo principal, subgrupo, grupo unitario.</p></aside>
+</main>
+
+<main id="v-onet" hidden>
+  <section class="izq">
+    <div class="barra"><input id="q-onet" type="search" placeholder="Buscar ocupación O*NET (título, código o descripción, en inglés)"></div>
+    <div id="lista-onet" class="lista"></div>
+    <div class="barra"><button id="onet-prev">&larr;</button><span id="onet-pag"></span><button id="onet-next">&rarr;</button></div>
+  </section>
+  <aside class="der" id="detalle-onet"><p class="vacio">Seleccione una ocupación O*NET para ver su descripción y tareas.</p></aside>
+</main>
+
+<main id="v-meta" hidden><section class="centro" id="meta"></section></main>
+
+<div id="tip" class="tip" hidden></div>
+<script src="/app.js"></script>
+</body>
+</html>

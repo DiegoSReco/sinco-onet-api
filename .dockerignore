@@ -1,0 +1,22 @@
+# Nada de datos en la imagen: se montan por volumen (licencia del PDF de Frey-Osborne sin resolver).
+data/
+.venv/
+.git/
+**/__pycache__/
+*.pyc
+.claude/
+docs/
+paper/
+dashboard/
+tests/
+requirements.txt
+src/ingest/
+src/annotate/
+src/match/
+src/score/
+src/validate/
+**/*frey*
+**/*osborne*
+**/*probabilidad*
+Dockerfile
+.dockerignore

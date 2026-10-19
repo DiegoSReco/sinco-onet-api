@@ -1,0 +1,31 @@
+# Configuracion de la muestra de oro y su revision humana (decision 005, secc. 8.1).
+# Hermano de config.toml (no se modifica este para no alterar el hash de las corridas de embeddings).
+# Todo lo marcado "provisional" no esta fijado por 005 (requiere decision humana; ver docs/issues/oro-2026-10-19-*.md).
+
+[meta]
+estado_parametros = "provisional, sin calibrar"
+seed = 20261020                 # semilla fija de muestreo y barajado (provisional: 005 exige semilla registrada, no valor)
+modelos = ["bge-m3", "multilingual-e5-large"]
+modelo_principal = "bge-m3"     # solo para terciles de margen; igual que config.toml
+
+[muestra]
+n_principal = 200               # 005 8.1 (propuesta aprobada en lo recomendado)
+n_piloto = 55                   # 005: 50-60; punto medio provisional
+minimo_por_estrato_principal = 2   # provisional
+minimo_por_estrato_piloto = 1      # provisional
+# Sobremuestreo de discrepancias (005 8.1 lo pide sin fijar el factor): factor relativo al tamano del estrato. Provisional.
+factor_discrepancia = 1.5
+factor_sin_coincidencia = 1.5
+# Division calibracion/prueba (005 8.1: 50/50 por estratos)
+fraccion_calibracion = 0.5
+
+[revision]
+candidatos_por_modelo = 5       # top-5 de cada modelo (005 8.1 protocolo ciego)
+n_distractores = 2              # 005 8.1: "2 distractores aleatorios"
+max_chars_descripcion_onet = 300   # descripcion breve (provisional)
+revisores = ["A", "B"]
+
+[resultados]
+umbral_kappa = 0.60             # PROVISIONAL: 005 no recomienda valor (requiere decision); convencion 0.6-0.8, no verificada
+bootstrap_B = 1000              # 005 8.3 "a decidir"; provisional
+k_precision = [1, 3, 5]

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "sinco_2019_pdf",
+    "url": "https://www.inegi.org.mx/contenidos/productos/prod_serv/contenidos/espanol/bvinegi/productos/nueva_estruc/702825198411.pdf",
+    "archivo": "data/raw/sinco_2019.pdf",
+    "version": "SINCO 2019 (INEGI, 2020)",
+    "descripcion": "Sistema Nacional de Clasificacion de Ocupaciones 2019, documento oficial (PDF)",
+    "fecha_descarga": "2026-10-19",
+    "bytes": 5895824,
+    "sha256": "6a8a80d6e193ecb466d2b3d85478b62c310476dc84d6b6a15b1af2530176f5f6"
+  },
+  {
+    "id": "onet_31_0_text",
+    "url": "https://www.onetcenter.org/dl_files/database/db_31_0_text.zip",
+    "archivo": "data/raw/onet_db_31_0_text.zip",
+    "version": "O*NET 31.0 (August 2026 Release)",
+    "descripcion": "O*NET Database 31.0, formato texto (tab-delimitado), release del sitio onetcenter.org",
+    "fecha_descarga": "2026-10-19",
+    "bytes": 13183034,
+    "sha256": "6883548adf5fde64cf6f801b35d15519c9225f2732c3cab0e281c652d16b23a9"
+  },
+  {
+    "id": "bls_isco08_soc2010",
+    "url": "https://www.bls.gov/soc/ISCO_SOC_Crosswalk.xls",
+    "archivo": "data/raw/bls_isco08_soc2010.xls",
+    "version": "BLS ISCO-08 a SOC 2010 (2012)",
+    "descripcion": "Crosswalk oficial BLS ISCO-08 a 2010 SOC",
+    "fecha_descarga": "2026-10-19",
+    "bytes": 311296,
+    "sha256": "0936c78c4ab2cb0b61d7cfe3dcf0f94d943a4e30b11dade1f11676307e2c0aae"
+  },
+  {
+    "id": "frey_osborne_2013_pdf",
+    "url": "https://www.oxfordmartin.ox.ac.uk/downloads/academic/The_Future_of_Employment.pdf",
+    "archivo": "data/raw/frey_osborne_future_of_employment_2013.pdf",
+    "version": "Frey & Osborne, The Future of Employment (Oxford Martin School working paper, 17 sept 2013)",
+    "descripcion": "Apendice (pp. 57-72 del PDF): 702 ocupaciones SOC 2010 con rango, probabilidad de computarizacion y etiqueta de entrenamiento. Licencia: el PDF no declara ninguna; derechos de los autores/Oxford Martin (uso academico con cita; no verificado).",
+    "fecha_descarga": "2026-10-19",
+    "bytes": 1139230,
+    "sha256": "1d0ef561ebef9ececda63403a40860aa172be953fe2b050d27de8987c9e852fc"
+  },
+  {
+    "id": "onet_soc_2010_to_2019_crosswalk",
+    "url": "https://www.onetcenter.org/taxonomy/2019/walk/2010_to_2019_Crosswalk.csv?fmt=csv",
+    "archivo": "data/raw/onet_soc_2010_to_2019_crosswalk.csv",
+    "version": "O*NET-SOC 2010 a O*NET-SOC 2019 (O*NET Center, taxonomia 2019)",
+    "descripcion": "Crosswalk oficial de versiones de la taxonomia O*NET-SOC (CSV). Pagina: https://www.onetcenter.org/taxonomy/2019/walk.html. Licencia O*NET: CC BY 4.0.",
+    "fecha_descarga": "2026-10-19",
+    "bytes": 108052,
+    "sha256": "8f026a33134bfde5770308d1c6117cf70d9dd41c2b3467e6dd271d65bdeecc5a"
+  }
+]

@@ -1,0 +1,57 @@
+# Configuracion de src/annotate/ (fase annotate). Decisiones 001 y 006.
+# Todo valor marcado "requiere decision" NO esta resuelto; no se rellena en silencio.
+
+[meta]
+prompt_version = "ann-v1"
+onet_version = "31.0"                 # data/raw/manifest.json (id onet_31_0_text)
+estado = "preparacion; sin corrida real"
+
+[modelo]
+# 001 P3: la version del modelo anotador requiere decision del usuario. Vacio a proposito.
+nombre = ""
+proveedor = ""
+temperatura = "requiere decision"     # 001 no la fija
+estado = "requiere decision"
+
+[capacidades]
+# 001 P3: la fecha de corte de capacidades concreta requiere decision.
+fecha_corte = "requiere decision"
+
+[texto]
+# Idioma del texto que se anota. 001 sec. 6.4 sugiere anotar ingles y espanol en una submuestra.
+# Provisional: ingles original (no existe traduccion aun). Ver docs/issues/anotacion-2026-10-19-traduccion-vs-ingles.md
+idioma_anotado = "en"
+translation_version = ""
+
+[mapa_numerico]
+# Rubrica: mapa fijado en configuracion. NO lo aplica src/annotate/ (lo usara la fase score).
+principal = { E0 = 0.0, E1 = 0.5, E2 = 1.0 }
+limite_inferior = { E0 = 0.0, E1 = 0.0, E2 = 1.0 }
+limite_superior = { E0 = 0.0, E1 = 1.0, E2 = 1.0 }
+
+[piloto]
+seed = 20261019
+n_total = 40
+# Asignacion fija por tipo de tarea (provisional: ver issue sobre core/supplemental)
+n_core = 28
+n_supplemental = 10
+n_sin_tipo = 2
+
+[corridas]
+n_corridas = 3                        # default de pruebas; lo decide el orquestador
+seed_base = 20261019
+
+[reintentos]
+max_reintentos_api = 3
+backoff_base_s = 2.0
+backoff_max_s = 30.0
+max_reintentos_formato = 2
+
+[subagente]
+# Decision del usuario (2026-10-19): sin API; anotan subagentes de Claude Code. Sin clave ni gasto en API.
+model = "claude-sonnet-5-5 (subagente Claude Code)"
+run_id_base = "piloto-2026-10-19"
+n_corridas = 3
+texto = "en"
+temperature_note = "solicitada 1.0, no controlable; valor por defecto de la sesion"
+# fecha de corte de capacidades = fecha de la corrida; se pasa como parametro explicito (--capability-cutoff / --date)

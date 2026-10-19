@@ -1,0 +1,26 @@
+﻿.venv/
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+.Rhistory
+.RData
+.Rproj.user/
+
+# Datos. Solo se publican las tablas listadas abajo (ver docs/decisions/007-repositorio-publico.md).
+# NO se publican: PDF y tablas de Frey-Osborne (licencia sin resolver), vectores, fichas de revision
+# de la muestra de oro, anotaciones del piloto ni los datos crudos (solo su manifiesto con URLs y hashes).
+data/raw/*
+!data/raw/manifest.json
+data/interim/
+data/processed/*
+!data/processed/sinco.parquet
+!data/processed/sinco_*.parquet
+data/processed/sinco_probabilidad_fo.parquet
+!data/processed/onet_ocupaciones.parquet
+!data/processed/tareas_onet_en.parquet
+!data/processed/tareas_onet_ratings.parquet
+!data/processed/puente_onet_soc2019_soc2010.parquet
+!data/processed/crosswalk.parquet
+!data/processed/match_candidatos.parquet
+!data/processed/match_corridas.parquet
+!data/processed/match_sinco_resumen.parquet

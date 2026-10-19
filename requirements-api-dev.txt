@@ -1,0 +1,4 @@
+-r requirements-api.txt
+# Pruebas: httpx es requerido por fastapi.testclient / starlette.testclient
+pytest==9.1.1
+httpx==0.28.1

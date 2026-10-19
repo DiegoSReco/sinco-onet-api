@@ -1,0 +1,8 @@
+# Dependencias de runtime de la API (src/api/app.py). Versiones fijadas (aprobadas en la decision 004, opcion B).
+# El requirements.txt de la raiz es un freeze global en UTF-16 y no se modifica.
+fastapi==0.149.0
+starlette==1.9.0
+uvicorn==0.54.0
+pandas==3.0.6
+pyarrow==26.0.0
+pydantic==2.14.1

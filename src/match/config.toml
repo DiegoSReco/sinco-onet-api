@@ -1,0 +1,49 @@
+# Configuracion del Metodo A (variante A1) de emparejamiento SINCO 2019 -> O*NET-SOC.
+# Decision 005 (R.2, R.4). TODOS los valores de umbral/parametro son
+# "provisional, sin calibrar": se calibraran con la muestra de oro (005 secc. 8.1, pendiente de humanos).
+# El hash de este archivo se registra en la tabla de corridas.
+
+[meta]
+estado_parametros = "provisional, sin calibrar"
+estado_validacion = "sin_validar"
+metodo = "A1"
+text_template_version = "tt-a1-v1"
+seed = 20261019
+modelo_principal = "bge-m3"          # provisional: la eleccion definitiva es tras la muestra de oro (005 R.4.2)
+fuente_crosswalk = "semiautomatico_embeddings_A1"
+
+[recuperacion]
+k = 10                  # top-k de recuperacion (005 5.4) - provisional, sin calibrar
+rango_max_conjunto = 5  # conjunto S: rango <= 5 (005 5.4)
+# Cuantiles de la distribucion propia de cada modelo (los cosenos no son comparables entre modelos).
+# Provisional, sin calibrar.
+cuantil_baja_sim_top1 = 0.10   # sim_top1 por debajo => bandera baja_confianza
+cuantil_bajo_margen = 0.10     # margen por debajo => bandera baja_confianza
+cuantil_sin_coincidencia = 0.05  # sim_top1 por debajo => match_status = sin_coincidencia (NA en p_FO). Ver issue.
+
+[texto]
+max_ocupaciones_ejemplo = 50    # "hasta N ocupaciones ejemplo" (005 5.1); son cortas
+# Prioridad de campos al truncar por tokens (005 5.1): titulo, ocupaciones ejemplo, descripcion, funciones.
+prioridad_truncamiento = ["titulo", "ocupaciones", "descripcion", "funciones"]
+
+[modelos.bge-m3]
+hf_id = "BAAI/bge-m3"
+revision = "5617a9f61b028005a4858fdac845db406aefb181"
+prefijo_consulta = ""
+prefijo_documento = ""
+max_length = 1024      # el modelo admite 8192; los documentos SINCO rara vez pasan de ~700 tokens
+delta = 0.04           # provisional, sin calibrar (ventana de similitud respecto a top-1)
+tau = 0.05             # provisional, sin calibrar (temperatura del softmax)
+
+[modelos.multilingual-e5-large]
+hf_id = "intfloat/multilingual-e5-large"
+revision = "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3"
+prefijo_consulta = "query: "      # la ficha exige prefijo; para similitud simetrica, "query: " en ambos lados (005 5.3)
+prefijo_documento = "query: "
+max_length = 512
+delta = 0.02           # provisional, sin calibrar (los cosenos de e5 se comprimen en un rango estrecho)
+tau = 0.02             # provisional, sin calibrar
+
+[puente_fo]
+# Agregacion (005 5.7): principal = media ponderada por similitud (softmax(sim/tau) dentro de S).
+agregacion_principal = "ponderada_softmax"
