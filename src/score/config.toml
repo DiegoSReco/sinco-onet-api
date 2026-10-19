@@ -1,0 +1,52 @@
+# Configuracion de src/score/ (fase score). Decision 001 sec. 4.3-4.5; 008.
+# El mapa numerico E0/E1/E2 NO se repite aqui: se lee de src/annotate/config.toml.
+# Todo valor marcado PROVISIONAL no esta fijado por ninguna decision (ver docs/issues/score-2026-10-19-*.md).
+
+[mapa]
+fuente = "src/annotate/config.toml"
+seccion = "mapa_numerico"
+principal = "principal"
+inferior = "limite_inferior"
+superior = "limite_superior"
+
+[rutas]
+crosswalk = "data/processed/crosswalk.parquet"
+universo_tareas = "data/processed/tareas_onet_en.parquet"
+ratings = "data/processed/tareas_onet_ratings.parquet"
+anotaciones_dir = "data/processed/annotations/pilot"
+salida_dir = "data/processed"
+issues_dir = "docs/issues"
+
+[agregacion_onet]
+# 001 4.4: principal = tareas centrales, pesos iguales.
+tipo_principal = "core"
+# Variante ponderada: 001 4.4 deja [NO VERIFICADO] que campos usar. PROVISIONAL: se calculan ambas
+# escalas de O*NET con peso = data_value, sin transformar.
+escala_importancia = "IM"
+escala_relevancia = "RT"
+excluir_recommend_suppress = true     # PROVISIONAL
+
+[entre_corridas]
+# Ninguna decision fija como agregar entre corridas. PROVISIONAL: media, minimo y maximo por ocupacion.
+metodo = "media_min_max"
+estado = "PROVISIONAL"
+
+[cobertura]
+# PROVISIONAL (sin decision): una O*NET es "elegible" si fracciones de sus tareas estan anotadas
+umbral_tareas_onet = 0.5
+# PROVISIONAL: E_SINCO solo si la fraccion de O*NET emparejados elegibles es >= este umbral
+umbral_onet_sinco = 0.5
+
+[crosswalk]
+# 005 5.6: pares sin_coincidencia no aportan exposicion
+excluir_match_status = ["sin_coincidencia"]
+peso = "uniforme"                      # 001 4.5: uniformes si no hay pesos de crosswalk
+
+[piloto]
+# Una corrida es piloto si cumple cualquiera de estas condiciones (PROVISIONAL):
+umbral_cobertura_ocupaciones = 0.95    # fraccion de ocupaciones O*NET del universo con >=1 tarea anotada
+umbral_cobertura_tareas = 0.95         # fraccion de tareas del universo anotadas
+prefijos_run_id = ["piloto", "dryrun", "dry-run"]
+modelos_no_resultado = ["dry-run-sim"]
+etiqueta = "PILOTO, NO RESULTADO"
+etiqueta_normal = "PROVISIONAL, SIN VALIDAR"

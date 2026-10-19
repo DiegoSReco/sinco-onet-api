@@ -1,6 +1,6 @@
 # 005 - Emparejamiento SINCO 2019 -> SOC/O*NET con embeddings, para asignar probabilidades de Frey y Osborne
 
-> **ESTADO: APROBADA POR EL USUARIO (2026-10-19), implementación autorizada** en el alcance de las secciones R.1 a R.8 (aprobación global en R.7; aprobación de pendientes en R.8). Lo que R.7 y R.8 marcan como "requiere decisión" sigue pendiente de revisión humana. Depende de 001 y 003, aprobadas el 2026-10-19 (ver R.6 y R.8). El número 004 lo usa el agente de datos (despliegue de la API; aprobada, opción A). El número 006 contiene los cambios propuestos a la rúbrica y el glosario.
+> **ESTADO: APROBADA POR EL USUARIO (2026-10-19), implementación autorizada** en el alcance de las secciones R.1 a R.9 (aprobación global en R.7; aprobación de pendientes en R.8; top-2 y artículo de Ceballos en R.9). Lo que R.7 a R.9 marcan como "requiere decisión" sigue pendiente de revisión humana. Depende de 001 y 003, aprobadas el 2026-10-19 (ver R.6 y R.8). El número 004 lo usa el agente de datos (despliegue de la API; aprobada, opción B). El número 006 contiene los cambios a la rúbrica y el glosario (aplicados). La decisión 009 modifica el conjunto de candidatos a top-2 (R.9).
 > Nota histórica: al redactarse (propuesta del agente de métodos) no se había instalado nada, ejecutado ningún modelo ni calculado ninguna cifra (reglas 1 y 7 de CLAUDE.md). Esa situación se mantiene hasta que se implemente.
 
 - Fecha: 2026-10-19
@@ -23,21 +23,21 @@ Solo las que 005 §10 listó para embeddings y que se consideran cubiertas por e
 3. `scipy`.
 4. Descarga de los pesos de los modelos candidatos de §5.3 (BAAI/bge-m3, intfloat/multilingual-e5-large) desde Hugging Face, fijando revisión (commit) exacta.
 
-Quedan **fuera** (no aprobadas): APIs de pago (embeddings o LLM), rerank con LLM (P13), `statsmodels`, `faiss`, cualquier otro paquete. Cualquier adición exige nueva decisión. Descargas de datos nuevos (tabla FO, crosswalk O*NET 2010<->2019, texto ISCO-08) siguen requiriendo hash en `data/raw/manifest.json` (regla 3) y no están autorizadas por la respuesta (ver R.3). (La tabla FO y el puente O*NET 2019 -> 2010 ya se ingestaron por el agente de datos; ver R.7. El texto ISCO-08 no.) (`uvicorn` fue aprobado en 004, Registro 2; no es una dependencia de este método.)
+Quedan **fuera** (no aprobadas): APIs de pago (embeddings o LLM), rerank con LLM (P13), `statsmodels`, `faiss`, cualquier otro paquete. Cualquier adición exige nueva decisión. Descargas de datos nuevos (tabla FO, crosswalk O*NET 2010<->2019, texto ISCO-08) siguen requiriendo hash en `data/raw/manifest.json` (regla 3) y no están autorizadas por la respuesta (ver R.3). (La tabla FO y el puente O*NET 2019 -> 2010 ya se ingestaron por el agente de datos; ver R.7. El texto ISCO-08 no.) (`uvicorn`, y después `fastapi` y `starlette`, fueron aprobados en 004; no son dependencias de este método.)
 
 **Registro obligatorio por corrida (regla 4):** `run_id`, modelo (nombre), revisión/commit del modelo, fecha, `text_template_version`, `seed`, normalización, truncamiento, versiones de librerías y dispositivo/dtype, y hash de la matriz de vectores (§4.3). Sin estos campos la corrida no es válida. Los parámetros (k, delta, tau, umbrales, B) viven en un archivo de configuración versionado, no en el código.
 
 ### R.3 Lo que NO quedó resuelto por la primera respuesta y estaba PENDIENTE DE REVISIÓN HUMANA
-(Estado original. Las respuestas posteriores cubren varios de estos puntos; ver R.7 y R.8 para el estado vigente de cada uno.)
+(Estado original. Las respuestas posteriores cubren varios de estos puntos; ver R.7, R.8 y R.9 para el estado vigente de cada uno.)
 - P6: A como método principal vs ambos (A y B). Ver R.6 sobre el efecto de no solicitar la tabla a INEGI.
 - P9: tamaño y composición de la muestra de oro, revisores, umbral de kappa; y el nivel de los umbrales (cosenos, delta, tau, margen), que dependen de la muestra de oro.
-- P2: lectura de la metodología de Ceballos y Guadarrama (2025).
+- P2: lectura de la metodología de Ceballos y Guadarrama (2025). (Atendida: ver R.9.)
 - P4: obtención y versión SOC de la tabla de Frey-Osborne en formato de datos. Sin ella no hay probabilidad que asignar.
 - P5: crosswalk O*NET-SOC 2019 -> 2010 (archivo y versión).
 - P7: texto ISCO-08 en español y licencia.
 - P10: ponderación (softmax / uniforme / empleo de EE. UU.).
 - P11: residuales (NA vs imputación marcada).
-- P12: conciliar 490 / 468 / 489 grupos.
+- P12: conciliar 490 / 468 / 489 grupos (ahora también 481; ver 003 §0).
 - P13: LLM como reranker (no aprobado).
 - Embeddings por API (no aprobados; ver R.2).
 - La resolución de P8 es parcial: se aprueban modelos locales y dependencias de R.2; no APIs.
@@ -46,7 +46,7 @@ Quedan **fuera** (no aprobadas): APIs de pago (embeddings o LLM), rerank con LLM
 ### R.4 Alcance mínimo implementable sin esas respuestas
 1. **Solo Método A** (§5), variante A1 (español contra inglés), como primer paso. Se implementa **la recuperación** SINCO -> O*NET-SOC (matriz de similitud, top-k, margen, banderas, `match_status`), que no requiere la tabla FO ni el puente 2019 -> 2010.
 2. Modelos: BGE-M3 y multilingual-e5-large, ambos locales, comparados; elección definitiva tras la muestra de oro.
-3. Parámetros (k = 10, delta, tau, umbrales de baja confianza) en **configuración**, con valores iniciales marcados "provisional, sin calibrar".
+3. Parámetros (k = 10, delta, tau, umbrales de baja confianza) en **configuración**, con valores iniciales marcados "provisional, sin calibrar". (Modificado por R.9: los candidatos que se usan son los 2 primeros.)
 4. **Todos los resultados se marcan `validado = FALSE` / "NO validado"** y así deben rotularse en cualquier salida, hasta pasar la muestra de oro (§8). No se publican cifras del artículo con ellos (regla 6).
 5. La asignación de `p_FO` (§5.7) queda **condicionada** a P4 y P5: el código puede dejarse listo, pero no se ejecuta hasta que existan la tabla FO y el puente, ambos con hash en el manifest. Si no se consiguen, se escribe un issue en `docs/issues/` y se detiene esa parte (regla 5). (Condición cumplida por la ingesta descrita en R.7; la asignación de `p_FO` puede ejecutarse, marcada NO validada.)
 6. **Método B queda bloqueado** por la falta del eslabón SINCO -> ISCO-08 (issue de datos; 003). No se implementa. (R.8: autorizado solo en principio; sigue sin implementarse hasta que el usuario lo pida explícitamente.)
@@ -61,7 +61,7 @@ Quedan **fuera** (no aprobadas): APIs de pago (embeddings o LLM), rerank con LLM
 
 ### R.6 Actualización (2026-10-19): aprobación de 001, 003 y 004; solicitud a INEGI
 Cita textual del usuario: "Aprobado 004, 001 y 003. La solicitud de la tabla no la necesitamos ya estan las tablas del catálogo".
-- **001, 003 y 004 quedan aprobadas.** 005 ya no depende de decisiones pendientes. Modificar `docs/rubric.md` y `docs/glossary.md` requería decisión posterior (regla 2): ver R.8 y la decisión 006.
+- **001, 003 y 004 quedan aprobadas.** 005 ya no depende de decisiones pendientes. Modificar `docs/rubric.md` y `docs/glossary.md` requería decisión posterior (regla 2): ver R.8 y la decisión 006 (aplicada).
 - **P3 resuelta por el usuario: no se solicita la tabla SOC-SINCO / SINCO-CIUO-08 a INEGI** (ni la equivalencia 2011-2019 por esa vía). Se anula la posibilidad de que esa tabla sustituya a B1 o sirva de estándar de oro (§12, P3 original).
 - **Efecto sobre B:** las tablas del catálogo SINCO (según los reportes del agente de datos) no contienen correspondencia con CIUO-08, SCIAN ni O*NET. El Método A se apoya directamente en ellas. El Método B sigue sin el eslabón SINCO -> ISCO-08 y ahora tampoco hay vía oficial prevista para obtenerlo; solo quedaría el mapeo semiautomático B1 con validación humana (§6.1; 003 §4 opción 2). Ver R.8 para su autorización en principio.
 - Sin tabla de INEGI, la calidad del emparejamiento se mide únicamente con la muestra de oro humana (§8): su tamaño y revisores (P9) se vuelven más críticos.
@@ -90,8 +90,8 @@ Cita textual del usuario (2026-10-19): "aprobar todo".
 | P6 | Cubierta en lo recomendado | Método A como principal; B como contraste parcial solo si se implementa (ver R.8) |
 | P8 | Cubierta | Modelos locales BGE-M3 y multilingual-e5-large comparados en la muestra de oro, uno elegido por precision@1 y @5 con criterios fijados antes; dependencias de R.2; sin APIs |
 | P9 (parte) | Cubierta en lo recomendado | Piloto de 50-60 grupos y muestra principal n = 200; doble revisión independiente de los 200 (alternativa económica: 50 % más tercer revisor); estratificación de §8.1; mitad calibración y mitad prueba; kappa de Cohen y ponderado con umbral **fijado antes de ver los datos** (ver "Requiere decisión" sobre el número) |
-| P10 | Cubierta | Ponderación de candidatos por softmax de similitud con tau calibrado (cifra principal `p_FO_w`); uniforme (`p_FO_mean`), min, max y top-1 siempre reportados; ponderación por empleo de EE. UU. solo como sensibilidad y solo si se consigue una fuente verificada |
-| P11 | Cubierta | Caso base: `NA` con `match_status = sin_coincidencia`; imputación por media ponderada de hermanos del subgrupo solo como sensibilidad, marcada `imputado = TRUE` y fuera de intervalos y correlaciones |
+| P10 | Cubierta | Ponderación de candidatos por softmax de similitud con tau calibrado (cifra principal `p_FO_w`); uniforme (`p_FO_mean`), min, max y top-1 siempre reportados; ponderación por empleo de EE. UU. solo como sensibilidad y solo si se consigue una fuente verificada (con top-2, ver R.9) |
+| P11 | Cubierta | Caso base: `NA` con `match_status = sin_coincidencia`; imputación por media ponderada de hermanos del subgrupo solo como sensibilidad, marcada `imputado = TRUE` y fuera de intervalos y correlaciones (con top-2, ver R.9) |
 | P13 | Cubierta | LLM como reranker no se activa por defecto; no se usa en la primera implementación |
 | Reglas de reporte (§8.4) | Cubiertas | Etiqueta corta, cobertura, `match_status`, rango min-max, `baja_confianza`, cifras solo de `data/processed/` |
 | Multiplicidad del puente O*NET 2019 -> 2010 (25 ocupaciones con más de un SOC 2010, 24 con probabilidades distintas) | Cubierta por §5.7 | El conjunto de SOC 2010 se propaga con pesos uniformes y se reporta (`p_FO_min`, `p_FO_max`, `n_candidatos`); luego se agrega a SINCO por similitud. Esta regla es la que 005 fija; ver "Requiere decisión" si el usuario prefiere otra |
@@ -103,9 +103,9 @@ Cita textual del usuario (2026-10-19): "aprobar todo".
 3. **Verificación de la extracción del apéndice.** El emparejamiento rango-código por orden está verificado por el agente de datos con comprobaciones por página y seis valores del paper; 005 §9 riesgo 6 pide verificar la transcripción contra el PDF "con muestra" sin fijar su tamaño. Requiere decisión: tamaño de la muestra y quién la revisa.
 4. **Número del umbral de kappa** y **quiénes son los revisores** (P9). 005 solo dice que se fija antes de ver los datos y cita la convención 0.6-0.8 (no verificada contra fuente); no recomienda un valor.
 5. **Método B (P6, P7, y P-B de 003).** B depende de SINCO -> ISCO-08 (inexistente, no se pedirá a INEGI) y de texto ISCO-08 en español con licencia (P7, sin recomendación). Estado actualizado en R.8: autorizado en principio, no se implementa hasta que el usuario lo pida; P7 sigue requiriendo decisión.
-6. **P2** (lectura de Ceballos y Guadarrama 2025): es una tarea humana, sin recomendación ejecutable. Sigue abierta.
-7. **P12** (490 / 468 / 489 grupos): 005 no tiene valor recomendado; depende de que el agente de datos cuente en el PDF. Sigue abierta y debe resolverse antes de fijar el tamaño de la muestra de oro.
-8. **Valores numéricos iniciales** de delta, tau, umbrales de baja confianza y B (bootstrap): 005 solo da B = 1000 "a decidir" y k = 10 como inicial; el resto se calibra con la muestra de oro. Se implementan en configuración como "provisional, sin calibrar".
+6. **P2** (lectura de Ceballos y Guadarrama 2025): **atendida (R.9):** el orquestador leyó el manuscrito; el artículo no describe el método de emparejamiento. Quedan abiertas la comparación con la versión de la revista y, si se desea, preguntar a los autores.
+7. **P12** (490 / 468 / 481 / 489 grupos): según el orquestador, el PDF de INEGI 2019 dice 490 (ver 003 §0); falta que el agente de datos lo confirme contando en el PDF. Debe resolverse antes de fijar el tamaño de la muestra de oro.
+8. **Valores numéricos iniciales** de delta, tau, umbrales de baja confianza y B (bootstrap): 005 solo da B = 1000 "a decidir" y k = 10 como inicial; el resto se calibra con la muestra de oro. Se implementan en configuración como "provisional, sin calibrar". (delta deja de usarse con top-2; R.9.)
 9. **Dependencias fuera de R.2** (p. ej. `statsmodels`, APIs): siguen no aprobadas. (Kappa, ICC y bootstrap pueden calcularse con scikit-learn y scipy.)
 
 **Efecto sobre el alcance de R.4:** queda autorizada la implementación del Método A, ahora incluyendo la asignación de `p_FO` (la condición de R.4.5 se cumple), con todos los resultados marcados NO validados hasta pasar la muestra de oro. B sigue sin implementarse.
@@ -115,10 +115,16 @@ Cita textual del usuario (2026-10-19): "aprobar todo".
 Cita textual del usuario, en respuesta al reporte del agente de métodos: "Si, aprobar pendientes incluyendo uvicorn."
 
 **Interpretación registrada (sin ampliar):** el "Si" confirma la extensión de la aprobación a las propuestas concretas de 001, 003 y 004 para sus preguntas abiertas, incluidas las dos que el agente de métodos señaló como no cubiertas. El estado de cada pregunta quedó registrado en cada decisión (001 §10, 003 §5, 004 "Preguntas abiertas"). Lo que no tiene recomendación concreta sigue "requiere decisión"; no se inventan valores.
-- **`docs/rubric.md` y `docs/glossary.md`:** la aprobación de 001 más esta respuesta constituyen la decisión registrada de la regla 2. El texto exacto está en `docs/decisions/006-cambios-rubrica-glosario.md` (aprobada en principio, pendiente de aplicar). 005 no modifica esos archivos.
+- **`docs/rubric.md` y `docs/glossary.md`:** la aprobación de 001 más esta respuesta constituyen la decisión registrada de la regla 2. El texto exacto está en `docs/decisions/006-cambios-rubrica-glosario.md` (aprobada y aplicada en versión 1). 005 no modifica esos archivos.
 - **Método B / SINCO -> ISCO-08:** autorizado **solo en principio**, con diseño de doble revisión humana (003 §4 y 005 §8.1). **No se implementa hasta que el usuario lo pida explícitamente.** Sigue requiriendo decisión: P7 (texto ISCO-08 en español y licencia), revisores y guía, y uso de LLM. El alcance implementable sigue siendo el Método A (R.4, R.7).
-- **uvicorn:** aprobado en 004 (Registro 2). No afecta a este método. No aprueba FastAPI/starlette.
-- **Siguen como "requiere decisión"** (el usuario no dio valor y 005 no lo recomienda): los 17 códigos de Frey-Osborne fuera del puente, licencia del PDF de Frey-Osborne, tamaño y revisor de la verificación de la extracción, número del umbral de kappa y revisores, P7, P2, P12, valores numéricos iniciales (delta, tau, umbrales, B) y dependencias fuera de R.2.
+- **uvicorn:** aprobado en 004 (Registro 2). No afecta a este método.
+- **Siguen como "requiere decisión"** (el usuario no dio valor y 005 no lo recomienda): los 17 códigos de Frey-Osborne fuera del puente, licencia del PDF de Frey-Osborne, tamaño y revisor de la verificación de la extracción, número del umbral de kappa y revisores, P7, P12, valores numéricos iniciales (delta, tau, umbrales, B) y dependencias fuera de R.2. (P2 atendida en R.9.)
+
+### R.9 Actualización (2026-10-19): top-2 y artículo de Ceballos y Guadarrama
+
+Cita textual del usuario (transmitida por el coordinador): "Antes solo utiliza los embeddings más altos (2 primeros)." y "Agregue en data/raw en artículo de Owen pero no menciona nada de la asgignacio nde probabilidad."
+- **Top-2:** el conjunto de candidatos S por umbrales (§5.4: rango <= 5 y similitud >= sim_top1 - delta) se **sustituye** por `k_top = 2`: los dos O*NET-SOC con mayor similitud por grupo SINCO; interpretación del orquestador a confirmar: por modelo, con bge-m3 principal y e5 alterno. Detalle, efectos y preguntas abiertas (peso entre los 2 candidatos, regla de `sin_coincidencia`, muestra de oro con top-2) en la decisión 009. Las partes de 005 que hablan de S, delta y `rango <= 5` quedan **superadas** por 009 en lo que la contradicen; el resto de 005 sigue vigente.
+- **Artículo de Ceballos y Guadarrama:** el usuario lo agregó a `data/raw` (manifest id `ceballos_guadarrama_2025_pdf`); lo leyó el orquestador. Su hallazgo: la frase sobre el emparejamiento existe textualmente, pero el artículo **no describe cómo se hizo**. P2 queda **resuelta en el sentido de que el artículo no describe el método de emparejamiento.** Detalle en §2.
 
 ---
 
@@ -132,19 +138,22 @@ Aclaración de alcance, importante (decisión 001): la probabilidad de Frey y Os
 
 ## 1. Pregunta
 
-¿Cómo asignar a cada grupo unitario SINCO 2019 (490 según el parquet; ver discrepancia 468/490/489 en 003 §0, sin resolver aquí) una probabilidad de Frey y Osborne, pasando por O*NET/SOC, con emparejamiento basado en embeddings, de forma reproducible, auditable y con incertidumbre explícita?
+¿Cómo asignar a cada grupo unitario SINCO 2019 (490 según el parquet y, según el orquestador, según el PDF de INEGI 2019; ver 003 §0 sobre las cifras 468, 481 y 489) una probabilidad de Frey y Osborne, pasando por O*NET/SOC, con emparejamiento basado en embeddings, de forma reproducible, auditable y con incertidumbre explícita?
 
-## 2. Hipótesis sobre Ceballos y Guadarrama (2025): estado de verificación
+## 2. Ceballos y Guadarrama (2025): estado de verificación
 
-El usuario cree que el artículo hace el emparejamiento "manualmente". **[NO VERIFICADO]**.
+**Actualización (2026-10-19).** El usuario creía que el artículo hacía el emparejamiento "manualmente". El usuario agregó el artículo a `data/raw` (manuscrito PDF, manifest id `ceballos_guadarrama_2025_pdf`, sha256 `669e3c4b7ced7a2d1f428ccc28b26c07dd65e001e2af9c500c7be8ecc5510baa`, archivo "Brechas salariales y automatización.docx.pdf"). Lo leyó el orquestador con `pdftotext`; **yo no lo leí**, y transcribo lo que él reporta.
 
-Intentos (2026-10-19):
-- PDF https://revistas.uniandes.edu.co/index.php/dys/article/view/11083/10931: la herramienta devolvió solo encabezado de la revista; sin texto.
-- HTML https://revistas.uniandes.edu.co/index.php/dys/article/view/11083/11419: igual, solo encabezado.
-- Página del artículo https://revistas.uniandes.edu.co/index.php/dys/article/view/11083: resumen (ENOE 2024, Oaxaca-Blinder, efectos negativos sobre salarios) y referencias que mencionan SINCO 2019; **no** describe el método de emparejamiento. (El resumen devuelto por la herramienta no es lectura directa de las referencias; no lo uso para afirmar nada más.)
-- Una búsqueda web con sus términos no devolvió el artículo ni nada sobre su emparejamiento.
+**Verificado por el orquestador:**
+- Título y autores: Owen Eli Ceballos Mina y Humberto Guadarrama Gómez, UAM-Azcapotzalco. Datos ENOE 3T 2024. Oaxaca-Blinder con corrección por sesgo de selección.
+- La introducción dice que adapta el enfoque de Frey y Osborne (2017) "a las 481 ocupaciones disponibles en el catálogo mexicano" del SINCO; la sección 3 dice "El catálogo del SINCO se conforma de 489 ocupaciones" en nueve categorías (inconsistencia interna 481 frente a 489; cita INEGI 2019; el PDF no dice qué versión de SINCO).
+- La frase sobre el emparejamiento existe, textualmente: "se adaptaron los cálculos elaborados por Frey y Osborne (2017), correspondientes a ocupaciones registradas en la encuesta O*NET, emparejándolos con las ocupaciones inscritas en el SINCO. En los casos en que no se identificaron coincidencias directas entre los catálogos, se asignó la probabilidad de una ocupación similar o la media del subgrupo al que pertenecía el empleo".
+- **El artículo NO describe cómo se hizo el emparejamiento** (ni manual ni automático, ni criterios, ni cobertura, ni cuántas ocupaciones por imputación, ni el crosswalk usado). **La hipótesis del usuario de que era "manual" no está respaldada por el texto.**
+- Asume que las probabilidades de EE. UU. aplican a México citando a Cebreros et al. (2020) y Varela y Tavares (2023); reporta probabilidad media de 68 % total, 58 % formal y 80 % informal (cifras del orquestador; no las verifiqué); reconoce en limitaciones que las probabilidades vienen del contexto norteamericano. Cita Frey y Osborne como 2017 (versión de revista).
 
-Por tanto no sé si el emparejamiento es manual, por tabla de correspondencia o por texto; tampoco su versión de SINCO, el año de Frey-Osborne ni su cobertura. La cita "ocupación similar o media del subgrupo" sigue **sin confirmar**. Acción pendiente: que una persona lea la sección metodológica.
+**Siguen [NO VERIFICADO]:** cómo se emparejaron las ocupaciones (método, criterios, cobertura), la versión de SINCO usada, y si la versión de la revista coincide con el manuscrito (títulos distintos). Intentos anteriores con la versión de la revista (2026-10-19): PDF https://revistas.uniandes.edu.co/index.php/dys/article/view/11083/10931 y HTML .../11419 devolvieron solo encabezado; la página del artículo https://revistas.uniandes.edu.co/index.php/dys/article/view/11083 da el resumen (ENOE 2024, Oaxaca-Blinder, efectos negativos sobre salarios) sin describir el emparejamiento.
+
+**Consecuencia para P2:** resuelta en el sentido de que el artículo no describe el método de emparejamiento. Si se quiere saber cómo emparejaron, hay que preguntar a los autores o buscar material suplementario. La regla "ocupación similar o media del subgrupo" **existe en el texto** (ya no es [NO VERIFICADO] que exista); lo que no se sabe es cómo se aplicó.
 
 **Hallazgo colateral útil (otro artículo, no Ceballos).** Minian y Martínez Monroy (2018, *Problemas del Desarrollo*, https://www.probdes.iiec.unam.mx/index.php/pde/article/download/64001/62384?inline=1), según el resumen que produjo la herramienta de lectura (no verifiqué el texto directamente, y el fragmento citado debe contrastarse con el original), emplean "la tabla de comparación SOC-SINCO proporcionada por el INEGI (2012)", con SINCO 2011; la tabla usa SOC a 5 dígitos y Frey-Osborne a 6; ponderan las probabilidades con empleo de EE. UU. (BLS 2016) o promedio simple, y reportan resultados similares con ambos y entre 5 y 6 dígitos. Implicaciones: (a) existe, o existió, una tabla de INEGI SOC-SINCO (2011), lo que **matiza el issue de datos** (que busca SINCO 2019 -> CIUO-08) y debería consultarse a INEGI [**actualización 2026-10-19: el usuario decidió no solicitarla; ver R.6**]; (b) sería SINCO 2011, no 2019, y el anexo de equivalencia 2011-2019 quedó fuera de alcance (diccionario de datos); (c) hay precedente mexicano de promedio simple vs ponderado por empleo de EE. UU.
 Cabrero Mendoza y Guajardo Mendoza (CLAD, 2022) aplican el método adaptado a SINCO según un resultado de búsqueda; **no leído**.
@@ -197,7 +206,7 @@ Propuesta: A1 como base y A2 como sensibilidad sobre una muestra o el total (cos
 
 ### 5.4 Similitud, top-k y umbrales
 - Coseno sobre vectores L2-normalizados; matriz 490 x 1016 por fuerza bruta (no se requiere índice vectorial).
-- Top-k: k = 10 para recuperación; conjunto de candidatos S = {j : rango <= 5 y sim_j >= sim_top1 - delta}, con delta calibrado (valor inicial sugerido a ajustar en la muestra de oro, no fijado aquí).
+- Top-k: k = 10 para recuperación; conjunto de candidatos S = {j : rango <= 5 y sim_j >= sim_top1 - delta}, con delta calibrado (valor inicial sugerido a ajustar en la muestra de oro, no fijado aquí). **[Superado por la decisión 009 (R.9): los candidatos que se usan son los 2 primeros, `k_top = 2`, por modelo; la regla de S con delta queda sin efecto.]**
 - Margen: `margin = sim_top1 - sim_top2`. Casos con margen bajo o sim_top1 bajo (cuantiles calibrados) -> bandera `baja_confianza`.
 - Diagnóstico de consistencia de gran grupo SOC (2 dígitos) esperado a partir de la división SINCO: **solo bandera**, no restricción (la estructura SINCO difiere de SOC; 003 §4).
 - Rerank opcional con LLM (mismo registro de corrida): solo para candidatos del top-5; salida categórica {exacto, parcial, incorrecto} + justificación; se compara con la muestra de oro antes de adoptarlo. **No se activa por defecto.**
@@ -206,9 +215,9 @@ Propuesta: A1 como base y A2 como sensibilidad sobre una muestra o el total (cos
 No se usa como restricción. Se usa **después**, como control: para cada emparejamiento A, ver si el SOC 2010 final es alcanzable desde alguna ISCO con un SINCO plausible; solo es posible tras construir SINCO -> ISCO (003). Hasta entonces, no aplica.
 
 ### 5.6 Reglas de cardinalidad
-- **1:N (SINCO -> varios O*NET-SOC)**: se conserva S con pesos `w_j = softmax(sim_j / tau)` normalizados dentro de S (tau calibrado; alternativa uniforme). Dos O*NET-SOC con el mismo SOC 2010 se colapsan antes de ponderar.
+- **1:N (SINCO -> varios O*NET-SOC)**: se conserva S con pesos `w_j = softmax(sim_j / tau)` normalizados dentro de S (tau calibrado; alternativa uniforme). Dos O*NET-SOC con el mismo SOC 2010 se colapsan antes de ponderar. (Con top-2, S son los 2 primeros; ver 009.)
 - **N:1 (varios SINCO al mismo SOC)**: cada uno hereda el valor; se marca `n_sinco_mismo_soc` para tratar la dependencia en intervalos y correlaciones (clusters).
-- **Residuales / sin coincidencia** (los 33 grupos sin funciones son residuales): si `sim_top1` está bajo el umbral, el grupo queda **sin valor** (`NA`, `match_status = sin_coincidencia`). Como sensibilidad, imputación marcada (`imputado = TRUE`) con la media ponderada de los hermanos del subgrupo con coincidencia propia; nunca entra en intervalos ni en correlaciones de validación. (Esto es lo más cercano a la regla "ocupación similar / media del subgrupo" que atribuye el usuario a Ceballos, aún **no verificada**.)
+- **Residuales / sin coincidencia** (los 33 grupos sin funciones son residuales): si `sim_top1` está bajo el umbral, el grupo queda **sin valor** (`NA`, `match_status = sin_coincidencia`). Como sensibilidad, imputación marcada (`imputado = TRUE`) con la media ponderada de los hermanos del subgrupo con coincidencia propia; nunca entra en intervalos ni en correlaciones de validación. (Esto es lo más cercano a la regla "ocupación similar / media del subgrupo" que aparece textualmente en Ceballos y Guadarrama; el artículo no dice cómo la aplicaron, ver §2.)
 
 ### 5.7 Enlace de probabilidades FO
 `O*NET-SOC 2019` -> (puente O*NET 2019 -> 2010) -> `SOC 2010 6 dígitos` -> `p_FO`. Reglas del puente: 1:N (un O*NET 2019 puede corresponder a varios 2010) y N:1; se propaga como conjunto con pesos uniformes y se reporta. Las ocupaciones O*NET 2019 nuevas, sin equivalente 2010, quedan sin p_FO (se cuentan y se reportan).
@@ -262,7 +271,7 @@ Propuesta: ejecutar ambos y reportar el acuerdo. Si solo hay capacidad para uno,
 - **Población**: grupos unitarios SINCO (490 o el número que se concilie).
 - **Tamaño**: piloto de 50-60 para afinar la guía y estimar kappa; muestra principal n = 200 (propuesta; con precisión estimada de ±7 puntos para proporciones cercanas a 0.5 sin corrección por población finita, aproximación `1.96*sqrt(.25/200)` ~ 0.069; la corrección por población finita la reduce). Es un compromiso entre costo y precisión; **no es una cifra validada**.
 - **Estratificación** (asignación proporcional con mínimos): división SINCO (9); margen de A en terciles; tipo de caso (A y B coinciden / discrepan / sin coincidencia); presencia/ausencia de funciones y ocupaciones ejemplo; residuales vs específicos. Sobremuestrear discrepancias (donde hay más información) con ponderación inversa en las estimaciones globales.
-- **Protocolo ciego**: cada revisor ve el SINCO (texto completo) y un conjunto pooled de candidatos (top-5 de A1, A2, B y modelos alternativos, más 2 distractores aleatorios), en orden aleatorio, sin etiqueta de método ni similitud; puede además proponer un SOC fuera de la lista ("ninguno / otro"). Pooled-recall tiene sesgo hacia lo que los métodos recuperan; el campo "otro SOC" lo mitiga parcialmente.
+- **Protocolo ciego**: cada revisor ve el SINCO (texto completo) y un conjunto pooled de candidatos (top-5 de A1, A2, B y modelos alternativos, más 2 distractores aleatorios), en orden aleatorio, sin etiqueta de método ni similitud; puede además proponer un SOC fuera de la lista ("ninguno / otro"). Pooled-recall tiene sesgo hacia lo que los métodos recuperan; el campo "otro SOC" lo mitiga parcialmente. (Con top-2, qué candidatos entran al pool requiere decisión; ver 009.)
 - **Etiquetas**: por pareja {exacto, parcial, incorrecto}; por SINCO, el conjunto aceptable de SOC y un "mejor SOC".
 - **Doble revisión independiente** de toda la muestra de 200 (no solo el 10 % de 003; alternativa económica: doble revisión del 50 % más un tercer revisor para desacuerdos). Dos o más revisores con conocimiento de clasificaciones (003 P4), guía escrita.
 - **Acuerdo**: kappa de Cohen sobre {exacto, parcial, incorrecto} y kappa ponderado (ordinal); además acuerdo en el "mejor SOC" (proporción y kappa a nivel de SOC detallado, y de grupo amplio). Intervalos por bootstrap. Umbral de "aceptable" (convención común: 0.6-0.8 sustancial; **es una convención, no una norma**; **[NO VERIFICADO]** contra la fuente): fijar antes de ver los datos. Si kappa < umbral, reformular guía y repetir el piloto. Desacuerdos: resolver por tercero y registrar.
@@ -289,7 +298,7 @@ Re-calcular `p_FO` variando: modelo (BGE-M3, e5), texto (título / +descripción
 
 1. **Circularidad.** (a) Si el mismo emparejamiento SINCO -> O*NET alimenta tanto la exposición propia (por tareas O*NET) como `p_FO`, la correlación entre ambas está inflada por construcción: comparten el puente y el error de emparejamiento; solo evalúa la anotación, no el emparejamiento (003 hace la misma observación para OIT). Mitigación: usar B (independiente de A) para el lado de la validación, o reportar la correlación con ambos. (b) FO etiquetó con juicio humano y entrenó con descriptores de O*NET (la parte de variables de O*NET es mi recuerdo, **[NO VERIFICADO]**): si la exposición propia también se basa en O*NET, hay dependencia de insumo. (c) El mismo LLM que anota podría rerankear: sesgos compartidos.
 2. **Sesgo de traducción y de vocabulario.** Embeddings cruzados es/en pueden fallar en regionalismos y oficios con nombres locales; A2 introduce el sesgo del traductor. Mitigación: A1 vs A2 y muestra de oro.
-3. **Tareas O*NET que no existen en México.** Un emparejamiento correcto en título puede ocultar un contenido de trabajo distinto (más manual, otras herramientas). La probabilidad de FO es de EE. UU., 2013. Mitigación: bandera `cobertura_funciones`; reporte de que es transferencia.
+3. **Tareas O*NET que no existen en México.** Un emparejamiento correcto en título puede ocultar un contenido de trabajo distinto (más manual, otras herramientas). La probabilidad de FO es de EE. UU., 2013. Mitigación: bandera `cobertura_funciones`; reporte de que es transferencia. (Ceballos y Guadarrama reconocen la misma limitación, según el orquestador.)
 4. **Granularidad desigual.** Un grupo SINCO puede ser más amplio o más estrecho que varios SOC: agregación media oculta heterogeneidad; se reporta min-max.
 5. **Puente de versiones** O*NET 2019 -> SOC 2010 (A) y BLS 2012 (B): desactualizaciones, y suposiciones en ocupaciones nuevas.
 6. **Dependencia de la tabla FO**: si no se localiza o no se transcribe bien, el proyecto no puede avanzar en esta línea. Verificar transcripción contra el PDF con muestra.
@@ -297,8 +306,9 @@ Re-calcular `p_FO` variando: modelo (BGE-M3, e5), texto (título / +descripción
 8. **Muestra de oro con sesgo de pooling** y revisores con conocimiento heterogéneo; kappa puede ser bajo en ocupaciones ambiguas.
 9. **Interpretación pública** de `p_FO`: se confunde con la exposición; reglas de reporte arriba.
 10. **Reproducibilidad de modelos**: las versiones de modelos de HF/API cambian; fijar revisión y guardar vectores y hashes.
-11. **Hipótesis sobre Ceballos**: si su emparejamiento resultara ser manual o por tabla INEGI, la comparación con su resultado es una validación adicional (no lograda; ver §2); no se da por supuesto.
+11. **Comparación con Ceballos y Guadarrama:** su emparejamiento no está descrito en el artículo (ver §2), por lo que no hay un procedimiento contra el cual replicar; una comparación de resultados es posible solo a nivel de probabilidades agregadas y con las salvedades de versión de SINCO y número de ocupaciones (481/489 internamente inconsistentes). No se da por supuesto que su método sea manual ni automático.
 12. **(Nuevo, R.7)** 17 códigos de FO fuera del puente, 205 ocupaciones O*NET sin probabilidad por la vía puente, y licencia del PDF de FO sin declarar: ver "Requiere decisión" en R.7.
+13. **(Nuevo, R.9)** Con top-2 se descartan candidatos 3 a 5; ver 009 §7.
 
 ## 10. Costos y dependencias (no se instala nada sin aprobación)
 
@@ -317,7 +327,7 @@ Paquetes que se necesitarían y que **no están en el stack de CLAUDE.md**:
 
 - Frey y Osborne (2013), página: https://www.oxfordmartin.ox.ac.uk/publications/the-future-of-employment; PDF: https://oms-www.files.svdcdn.com/production/downloads/academic/The_Future_of_Employment.pdf (descargado, ilegible con mis herramientas; apéndice no leído por mí; extraído por el agente de datos).
 - Entrenamiento con 70 ocupaciones etiquetadas a mano: https://arxiv.org/pdf/1706.06906 y https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/articles/theprobabilityofautomationinengland/latest (solo resultados de búsqueda).
-- Ceballos Mina y Guadarrama Gómez (2025): https://revistas.uniandes.edu.co/index.php/dys/article/view/11083 (resumen); PDF .../11083/10931 y HTML .../11083/11419 (sin texto legible).
+- Ceballos Mina y Guadarrama Gómez (2025): https://revistas.uniandes.edu.co/index.php/dys/article/view/11083 (resumen); PDF .../11083/10931 y HTML .../11083/11419 (sin texto legible). Manuscrito PDF en `data/raw` (id `ceballos_guadarrama_2025_pdf`, sha256 `669e3c4b7ced7a2d1f428ccc28b26c07dd65e001e2af9c500c7be8ecc5510baa`), leído por el orquestador con `pdftotext`; no leído por mí.
 - Minian y Martínez Monroy (2018): https://www.probdes.iiec.unam.mx/index.php/pde/article/download/64001/62384?inline=1 (vía resumen de la herramienta, no lectura directa).
 - Cabrero Mendoza y Guajardo Mendoza (2022): https://revista.clad.org/ryd/article/view/lucha-contra-desempleo-tecnologico-analisis-casos-en-mexico (solo resultado de búsqueda).
 - O*NET-SOC taxonomía: https://www.onetcenter.org/taxonomy.html (solo resultado de búsqueda); informe https://onetcenter.org/reports/Taxonomy2019.html (sin cifras de crosswalk en lo leído).
@@ -327,25 +337,25 @@ Paquetes que se necesitarían y que **no están en el stack de CLAUDE.md**:
 
 ## 12. Preguntas abiertas para la revisión humana
 
-(Estado vigente en R.7 y R.8.)
+(Estado vigente en R.7, R.8 y R.9.)
 
 P1. **[RESUELTA por el usuario, 2026-10-19; ver sección R.1b]** Rol de Frey-Osborne: variable/score comparativa, a comparar después con la exposición; etiqueta "probabilidad de automatización (Frey-Osborne)". (Texto original: ¿se usa como referencia de validación convergente de la exposición propia, como variable comparativa, o no se usa? Es una medida de automatización (001), no de exposición; si se publica junto a la exposición, ¿bajo qué etiqueta y con qué advertencias?)
-P2. ¿Alguien puede leer la metodología de Ceballos y Guadarrama (2025) y confirmar versión de SINCO, año de FO, tipo de emparejamiento y cobertura? Hoy: [NO VERIFICADO]. **Sigue abierta (requiere decisión/tarea humana, R.7).**
+P2. **[RESUELTA en el sentido de que el artículo no describe el método de emparejamiento, 2026-10-19; ver §2 y R.9]** (Texto original: ¿Alguien puede leer la metodología de Ceballos y Guadarrama (2025) y confirmar versión de SINCO, año de FO, tipo de emparejamiento y cobertura?) El artículo cita Frey y Osborne 2017; no dice versión de SINCO ni cómo se emparejó; sigue sin saberse (preguntar a los autores o buscar material suplementario).
 P3. **[RESUELTA por el usuario, 2026-10-19; ver R.6: no se solicita a INEGI]** (Texto original: ¿Se solicita a INEGI la tabla SOC-SINCO (que Minian y Martínez Monroy citan para SINCO 2011) y la equivalencia 2011-2019? Cambia el diseño: podría sustituir a B1 o servir de oro.) Efecto: B1 no puede sustituirse por esa tabla; B sigue sin el eslabón SINCO -> ISCO-08 (ver R.8).
 P4. **[RESUELTA por la ingesta del agente de datos, 2026-10-19; ver R.7]** Tabla FO en `data/processed/frey_osborne_probabilidades.parquet` (702 filas). Quedan salvedades en R.7 (verificación por muestra, licencia, 17 códigos fuera del puente). (Texto original: ¿De dónde se obtiene la tabla FO en formato de datos y se confirma su versión SOC?)
 P5. **[RESUELTA por la ingesta del agente de datos, 2026-10-19; ver R.7]** Puente en `data/processed/puente_onet_soc2019_soc2010.parquet` (1164 filas). (Texto original: ¿Se localiza y aprueba el crosswalk O*NET-SOC 2019 -> 2010 de O*NET?)
 P6. ¿A como principal y B como contraste, o ambos con igual peso? ¿Se aprueba que B dependa de B1 (SINCO->ISCO) con validación humana? **APROBADA:** A como principal; B autorizado solo en principio con doble revisión humana (003 §4, 005 §8.1), sin implementar hasta que el usuario lo pida (R.8).
 P7. ¿Hay texto ISCO-08 en español con licencia utilizable? [NO VERIFICADO]. **Requiere decisión (R.7, R.8).**
 P8. ¿Se aprueban BGE-M3 y multilingual-e5-large como candidatos, y la instalación de dependencias (§10)? ¿Se admiten embeddings por API? (Aprobada por R.2 y R.7: modelos locales y dependencias de R.2; APIs no.)
-P9. Tamaño y composición de la muestra de oro (n=200, doble revisión completa vs 50 %), quiénes revisan y umbral de kappa. (Cubierta en lo recomendado: n=200 con piloto, doble revisión completa, umbral fijado de antemano; el número del umbral y los revisores requieren decisión, R.7.)
-P10. Ponderación de candidatos: ¿softmax por similitud, uniforme o por empleo de EE. UU. (fuente no verificada)? ¿Pesos por empleo de México no disponibles a nivel sub-SINCO? (Aprobada: softmax; uniforme y empleo EE. UU. como sensibilidad.)
-P11. Tratamiento de residuales y sin coincidencia: ¿dejar NA o imputar con media del subgrupo (marcado)? (Aprobada: NA en caso base; imputación marcada solo como sensibilidad.)
-P12. Conciliar el número de grupos unitarios (490 / 468 / 489) antes de fijar la muestra. **Sigue abierta (R.7).**
+P9. Tamaño y composición de la muestra de oro (n=200, doble revisión completa vs 50 %), quiénes revisan y umbral de kappa. (Cubierta en lo recomendado: n=200 con piloto, doble revisión completa, umbral fijado de antemano; el número del umbral y los revisores requieren decisión, R.7. La tabla de revisión humana de la muestra de oro se genera con scripts en `src/match/oro*.py`, según el coordinador.)
+P10. Ponderación de candidatos: ¿softmax por similitud, uniforme o por empleo de EE. UU. (fuente no verificada)? ¿Pesos por empleo de México no disponibles a nivel sub-SINCO? (Aprobada: softmax; uniforme y empleo EE. UU. como sensibilidad. Con top-2, ver 009.)
+P11. Tratamiento de residuales y sin coincidencia: ¿dejar NA o imputar con media del subgrupo (marcado)? (Aprobada: NA en caso base; imputación marcada solo como sensibilidad. Con top-2, ver 009.)
+P12. Conciliar el número de grupos unitarios (490 / 468 / 481 / 489) antes de fijar la muestra. **Atendida en parte (el orquestador reporta 490 en el PDF de INEGI 2019); requiere confirmación del agente de datos (R.7).**
 P13. ¿Se usa un LLM como reranker? Si sí, ¿con registro completo (regla 4) y evaluación previa en la muestra de oro? (Aprobada la recomendación: no se activa por defecto.)
 
 ## 13. Lista de [NO VERIFICADO] explícitos
 
-- Método de emparejamiento y cobertura de Ceballos y Guadarrama (2025); la cita "ocupación similar o media del subgrupo"; que sea manual.
+- Cómo emparejaron las ocupaciones Ceballos y Guadarrama (2025), la versión de SINCO que usan, su cobertura, y si el manuscrito coincide con la versión de la revista. (Verificado por el orquestador, no por mí: la frase "ocupación similar o media del subgrupo" existe textualmente y el artículo no describe el método; la hipótesis de que sea "manual" no está respaldada.)
 - Contenido del apéndice de Frey y Osborne (tabla, versión SOC, formato) **por mí**; que use SOC 2010 (el issue del agente de datos indica que 17 códigos no están en el puente como SOC 2010).
 - Entrenamiento de FO con variables de O*NET (recuerdo propio).
 - Archivo de crosswalk O*NET-SOC 2010 <-> 2019 y proporciones de cambios, **por mí** (el agente de datos reporta 1164 filas); cifras 1016/923 para la versión 31.0.
@@ -357,3 +367,4 @@ P13. ¿Se usa un LLM como reranker? Si sí, ¿con registro completo (regla 4) y 
 - Fuente de empleo por SOC para ponderar (OEWS).
 - Que las tablas del catálogo SINCO no contengan correspondencia con CIUO-08, SCIAN ni O*NET: lo afirman los reportes del agente de datos; no lo verifiqué directamente.
 - Cifras de R.7 (702, 1164, 811, 786, 25, 24, 17, 4): tomadas del reporte del coordinador y del issue de datos; no abrí los Parquet.
+- Cifras del manuscrito de Ceballos y Guadarrama (481, 489, 68 %, 58 %, 80 %) y la cifra 490 del PDF de INEGI 2019: reportadas por el orquestador; no las verifiqué.

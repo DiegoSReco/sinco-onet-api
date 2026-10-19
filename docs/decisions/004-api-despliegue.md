@@ -1,6 +1,6 @@
 # 004 - API de solo lectura y diagrama SINCO / O*NET: framework y despliegue
 
-> **ESTADO: APROBADA POR EL USUARIO (2026-10-19). DECISIÓN VIGENTE: opción B (FastAPI + starlette + uvicorn)** (ver Registro 3). La opción A (servidor de biblioteca estándar) queda como servidor de respaldo mientras exista. Hosting público: requiere decisión. Registro 4 (columnas opcionales del Método A1 y dependencia transitiva): pendiente de confirmación del usuario.
+> **ESTADO: APROBADA POR EL USUARIO (2026-10-19). DECISIÓN VIGENTE: opción B (FastAPI + starlette + uvicorn)** (ver Registro 3). La opción A (servidor de biblioteca estándar) queda como servidor de respaldo mientras exista. Hosting público: requiere decisión (el deployment está pendiente por instrucción del usuario, 009). Registro 4 (columnas opcionales del Método A1 y dependencia transitiva): pendiente de confirmación del usuario. **Registro 5: la regla "sin probabilidades en endpoints" fue reemplazada por decisión del usuario (probabilidad de automatización Frey-Osborne permitida y rotulada).**
 > Fecha: 2026-10-19. No calcula exposicion ni scores. No decide metodologia de crosswalk (regla 7 de CLAUDE.md).
 
 ## Registro de aprobación (1)
@@ -25,8 +25,8 @@ Registro (sin ampliar):
 - **Decisión vigente: B.** La opción A (servidor `http.server`, `src/api/server.py`) queda como **servidor de respaldo mientras exista**; no se requiere mantenerlo ni extenderlo.
 - **Pregunta abierta "migrar a la opción B": RESUELTA** (sí).
 - La capa de servicio pura (`src/api/service.py`) se mantiene como lógica de negocio independiente del servidor; las rutas de FastAPI deben ser una capa delgada sobre ella (migración estimada en ~50 líneas de rutas, según el análisis de esta decisión; no verificado por mí).
-- Las restricciones de diseño se mantienen: solo GET, sin escritura en `data/raw/` ni `data/processed/`, lista blanca de columnas por endpoint, ningún endpoint devuelve scores, exposición ni valoraciones de `tareas_onet_ratings`, y el contrato de `crosswalk.parquet`. Los endpoints se conservan; FastAPI aportará OpenAPI automático.
-- **Hosting público sigue "requiere decisión"** (opciones D, E o B+E; autenticación, CORS, costo no verificado, licencias). La elección de B no equivale a aprobar hosting público ni a publicar datos. El repositorio público contiene solo código y docs (decisión 007).
+- Las restricciones de diseño se mantienen: solo GET, sin escritura en `data/raw/` ni `data/processed/`, lista blanca de columnas por endpoint, y el contrato de `crosswalk.parquet`. (La parte de "ningún endpoint devuelve scores... ni probabilidades" fue modificada por el Registro 5; sigue prohibido servir exposición y valoraciones de `tareas_onet_ratings`.) Los endpoints se conservan; FastAPI aportará OpenAPI automático.
+- **Hosting público sigue "requiere decisión"** (opciones D, E o B+E; autenticación, CORS, costo no verificado, licencias). La elección de B no equivale a aprobar hosting público ni a publicar datos.
 - No verifiqué versiones ni compatibilidad de fastapi/starlette/httpx con Python 3.14.3; el implementador debe registrarlas y comprobarlas. La instalación la hace el implementador, no esta decisión.
 - Ambigüedad: el usuario dijo "FastApi"; starlette es dependencia transitiva de FastAPI y se aprobó explícitamente por claridad (instrucción del coordinador).
 
@@ -44,6 +44,18 @@ Registro y reservas:
 - Los resultados del emparejamiento siguen marcados NO validados (005 R.4); la API debe mostrarlos con ese rótulo.
 - **`opentelemetry-api`:** dependencia transitiva de fastapi, **no aprobada explícitamente** (el usuario aprobó fastapi, starlette, uvicorn y httpx solo para pruebas). Las dependencias transitivas de un paquete aprobado se consideran incluidas por defecto en la práctica, pero no hay una regla del proyecto que lo diga: **pendiente de confirmación**. No la verifiqué (no sé qué versión ni quién la requiere). Debe constar en la lista de versiones instaladas (y, si aplica, en `requirements`/lockfile), y revisarse la superficie de seguridad (riesgo 6).
 - Preguntas para el usuario: (a) ¿confirma la ampliación del esquema con esas columnas? (b) ¿acepta `opentelemetry-api` como transitiva?
+
+## Registro 5 (2026-10-19): la API sirve y permite descargar la probabilidad de automatización (Frey-Osborne)
+
+Citas textuales del usuario (transmitidas por el coordinador): "Continua con la asignación de probabilidad, De igual forma que se observe en la API y pueda descargarse." y "Cambia esa regla y usa probabilidades en el repo". Antes de la segunda, el orquestador advirtió al usuario que la licencia de redistribución del PDF y de las tablas de Frey-Osborne no está declarada y que publicarlas es difícil de revertir; el usuario decidió aun así (detalle y riesgos en 009 §4.3 y 007).
+
+Registro (sin ampliar):
+- **Regla reemplazada.** La regla "ningún endpoint devuelve scores ni probabilidades" (Contrato del crosswalk, Endpoints, Riesgo 2) queda **reemplazada** por: la API **sirve y permite descargar la "probabilidad de automatización (Frey-Osborne)"**, rotulada exactamente así, **marcada NO validada**, leída de `sinco_probabilidad_fo.parquet` si existe (estado vacío explícito si no), y acompañada de `match_status`, `n_candidatos`, `margin` y la cobertura.
+- **Sigue prohibido servir exposición** (`E_o`, `share_E2`, `share_any`, `exposure_class` o derivados) y las valoraciones (importancia/frecuencia/relevancia) de `tareas_onet_ratings`.
+- **El proyecto asume el riesgo de la licencia** de Frey-Osborne (riesgo aceptado por el usuario, no resuelto). Mitigación mínima propuesta: atribución y cita completa en el README y en las descargas, y retirar los datos si el titular de derechos lo solicita (pendiente de revisión humana).
+- La lista blanca y la prueba automática de Riesgo 2 deben actualizarse para permitir exactamente las columnas de la probabilidad rotulada y fallar ante cualquier columna de exposición; trabajo del implementador, a revisar.
+- Descarga de dataset completo o filtrado con matches: ver 009 §4.2 (formato y límites sin decidir).
+- Este registro no aprueba el hosting público; el deployment sigue pendiente (009).
 
 ## Pregunta
 Como se sirve, para visualizacion, la jerarquia SINCO 2019 (con su texto por nodo) y el catalogo O*NET (ocupaciones y tareas), con un espacio para las coincidencias SINCO-O*NET que hoy no existen.
@@ -71,11 +83,11 @@ Aprobados por el proyecto (CLAUDE.md / 002 / esta decision): pandas, pyarrow, py
 | fuente | texto | procedencia declarada (p. ej. `inegi`, `semiautomatico`, `manual`); sin valor por defecto |
 | estado_validacion | texto | `sin_validar`, `validado`, `rechazado` |
 
-Columnas opcionales aceptadas y mostradas tal cual si existen (no requeridas): `isco08_code`, `notas`, `match_quality`, `crosswalk_confidence`, `run_id`. Esto permite que el emparejamiento propuesto por el agente de metodos (005, embeddings) escriba el mismo archivo despues, con su `run_id`, sin cambiar la API. (Ampliacion propuesta por el agente de la API, pendiente de confirmacion: ver Registro 4.) Si el archivo existe pero no cumple el esquema, la API responde `estado: "esquema_invalido"` con la causa y NO muestra filas (regla 5). El esquema no admite columnas de score, exposicion ni probabilidad: si aparecen, se ignoran y se informa.
+Columnas opcionales aceptadas y mostradas tal cual si existen (no requeridas): `isco08_code`, `notas`, `match_quality`, `crosswalk_confidence`, `run_id`. Esto permite que el emparejamiento propuesto por el agente de metodos (005, embeddings) escriba el mismo archivo despues, con su `run_id`, sin cambiar la API. (Ampliacion propuesta por el agente de la API, pendiente de confirmacion: ver Registro 4.) Si el archivo existe pero no cumple el esquema, la API responde `estado: "esquema_invalido"` con la causa y NO muestra filas (regla 5). El esquema del crosswalk no admite columnas de score, exposicion ni probabilidad: si aparecen, se ignoran y se informa. (La probabilidad de automatizacion Frey-Osborne se sirve por endpoint propio desde `sinco_probabilidad_fo.parquet`, no desde el crosswalk; Registro 5.)
 Un generador provisional de candidatos NO se implementa aqui (decision metodologica; lo cubre 005).
 
 ### Endpoints (todos GET, sin escritura)
-`/api/health`, `/api/meta` (hash y version de fuentes, estado del crosswalk), `/api/sinco/tree`, `/api/sinco/{codigo}`, `/api/sinco/search?q=`, `/api/onet/occupations?q=&limit=&offset=`, `/api/onet/occupations/{soc}`, `/api/crosswalk?sinco_code=&onet_soc_code=`, `/api/crosswalk/schema`. Ningun endpoint devuelve scores, exposicion ni las valoraciones (importancia/frecuencia/relevancia) de `tareas_onet_ratings`.
+`/api/health`, `/api/meta` (hash y version de fuentes, estado del crosswalk), `/api/sinco/tree`, `/api/sinco/{codigo}`, `/api/sinco/search?q=`, `/api/onet/occupations?q=&limit=&offset=`, `/api/onet/occupations/{soc}`, `/api/crosswalk?sinco_code=&onet_soc_code=`, `/api/crosswalk/schema`. Ningun endpoint devuelve exposicion ni las valoraciones (importancia/frecuencia/relevancia) de `tareas_onet_ratings`. Por el Registro 5, se anaden endpoints para la probabilidad de automatizacion (Frey-Osborne) rotulada y NO validada, y para descargas (009 §4); sus rutas las define el implementador.
 
 ## Alternativas
 
@@ -96,17 +108,18 @@ Ruta: B en local ahora. Para publicar: B+E (API publica) o D (exportar los JSON 
 
 ## Riesgos y mitigaciones
 1. Mostrar coincidencias que parezcan oficiales: estado vacio explicito, columnas `fuente` y `estado_validacion` obligatorias, y aviso permanente de "no es una correspondencia oficial" cuando `fuente` no sea INEGI.
-2. Fuga de exposicion/scores: lista blanca de columnas por endpoint y prueba automatica que falla si aparecen nombres tipo score/exposure/prob. Con FastAPI, el esquema OpenAPI automatico no debe exponer campos fuera de la lista blanca (usar modelos de respuesta pydantic explicitos). Revisar que las columnas del Registro 4 no produzcan falsos positivos.
-3. Servidor expuesto a internet: con B es mas defendible que `http.server`, pero no se publica ninguna instancia sin decidir hosting, autenticacion, CORS y licencias (ver 007).
-4. Licencia/atribucion: O*NET (CC BY 4.0, atribucion a USDOL/ETA) y SINCO (INEGI, termino de libre uso, citar fuente). Incluir atribucion en la pagina.
+2. Fuga de exposicion: lista blanca de columnas por endpoint y prueba automatica que falla si aparecen nombres tipo exposure/exposicion/share_E2/exposure_class (la regla original tambien incluia score/prob; por el Registro 5 la probabilidad de automatizacion rotulada queda permitida). Con FastAPI, el esquema OpenAPI automatico no debe exponer campos fuera de la lista blanca (usar modelos de respuesta pydantic explicitos). Revisar que las columnas del Registro 4 no produzcan falsos positivos.
+3. Servidor expuesto a internet: con B es mas defendible que `http.server`, pero no se publica ninguna instancia sin decidir hosting, autenticacion, CORS y licencias (ver 007). Una instancia publica serviria probabilidades de Frey-Osborne con licencia sin declarar (riesgo aceptado por el usuario, Registro 5).
+4. Licencia/atribucion: O*NET (CC BY 4.0, atribucion a USDOL/ETA), SINCO (INEGI, termino de libre uso, citar fuente) y Frey-Osborne (licencia no declarada; citar Frey y Osborne 2013/2017). Incluir atribucion en la pagina y en las descargas.
 5. Rendimiento: 11 tablas Parquet pequenas (<20 MB en memoria); se cargan una vez y se cachean; solo lectura.
 6. Aprobar dependencias nuevas (y sus transitivas, p. ej. opentelemetry-api) aumenta la superficie de mantenimiento y de seguridad: fijar versiones y registrarlas.
 
-## Preguntas abiertas para el humano (estado tras el Registro 4)
+## Preguntas abiertas para el humano (estado tras el Registro 5)
 1. FastAPI (opcion B) y uvicorn. **RESUELTA: aprobados (Registro 3).** Pregunta de migrar a B: **resuelta (si).**
-2. Publico objetivo: local/interno o publico en internet. **Local primero aprobado.** Hosting publico (D, E o B+E): **requiere decision**; no se inventa.
+2. Publico objetivo: local/interno o publico en internet. **Local primero aprobado.** Hosting publico (D, E o B+E): **requiere decision; el deployment esta pendiente por instruccion del usuario (009).**
 3. Idioma de la interfaz. **APROBADO: espanol** (como esta implementado).
 4. Quien alimenta `crosswalk.parquet` y con que `fuente`/`estado_validacion` iniciales. **APROBADO segun el contrato de esta decision y 005 R.4.7:** el emparejamiento de 005 escribe el archivo con `fuente` declarada (p. ej. `semiautomatico`), `estado_validacion = sin_validar` y `run_id`, sin columnas de score.
-5. Atribucion y licencias en la pagina (riesgo 4). **APROBADO el valor recomendado:** incluir atribucion a O*NET (CC BY 4.0, USDOL/ETA) y a INEGI. El texto exacto de la atribucion y la licencia del PDF de Frey-Osborne (si algun dia se muestra) **requieren decision**.
+5. Atribucion y licencias en la pagina (riesgo 4). **APROBADO el valor recomendado:** incluir atribucion a O*NET (CC BY 4.0, USDOL/ETA) y a INEGI. El texto exacto de la atribucion **requiere decision**; la licencia de Frey-Osborne es riesgo aceptado por el usuario, no resuelta (Registro 5).
 6. Hosting publico con datos, autenticacion, CORS y costos: **requiere decision** (ver 007).
-7. (Nueva, Registro 4) Confirmar la ampliacion del esquema del crosswalk con las columnas del Metodo A1 y aceptar `opentelemetry-api` como transitiva: **pendiente de confirmacion del usuario.**
+7. Confirmar la ampliacion del esquema del crosswalk con las columnas del Metodo A1 y aceptar `opentelemetry-api` como transitiva (Registro 4): **pendiente de confirmacion del usuario.**
+8. (Nueva, Registro 5) Formato, limites y filtros de las descargas, y rutas/listas blancas de los nuevos endpoints: **requiere decision / revision.**

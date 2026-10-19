@@ -18,7 +18,20 @@ from src.api.app import create_app
 
 ROOT = Path(__file__).resolve().parents[2]
 PROC = ROOT / "data" / "processed"
-PROHIBIDO = re.compile(r"(score|expos|prob|frey|osborne)", re.I)
+# Decision del usuario 2026-10-19: solo se admite la probabilidad de automatizacion (Frey-Osborne): llaves
+# "probabilidad_automatizacion_fo*" y las rutas /api/probabilidad*. Exposicion y scores siguen prohibidos.
+_PROB_OK = re.compile(r"^(probabilidad_automatizacion_fo|/api/probabilidad)")
+_PROHIBIDO_RE = re.compile(r"(score|expos|prob|frey|osborne)", re.I)
+
+
+class _Prohibido:
+    @staticmethod
+    def search(k):
+        k = str(k)
+        return None if _PROB_OK.match(k) else _PROHIBIDO_RE.search(k)
+
+
+PROHIBIDO = _Prohibido()
 TABLAS = ["sinco", "sinco_descripcion", "sinco_ocupaciones_ejemplo", "sinco_funciones", "sinco_incluye_excluye", "sinco_referencias",
           "sinco_fe_erratas", "sinco_fuente", "onet_ocupaciones", "tareas_onet_en"]
 
@@ -195,7 +208,8 @@ def test_solo_lectura_metodos(base):
 
 def test_sin_scores_ni_exposicion_en_respuestas(base):
     rutas = ["/api/meta", "/api/sinco/tree", "/api/sinco/4213", "/api/sinco/42", "/api/sinco/search?q=venta",
-             "/api/onet/occupations?limit=200", "/api/onet/occupations/11-1011.00", "/api/crosswalk", "/api/crosswalk/schema"]
+             "/api/onet/occupations?limit=200", "/api/onet/occupations/11-1011.00", "/api/crosswalk", "/api/crosswalk/schema",
+             "/api/probabilidad", "/api/probabilidad/4213"]
     for r in rutas:
         _, d = gj(base, r)
         malas = [k for k in llaves(d) if PROHIBIDO.search(str(k))]
@@ -230,7 +244,8 @@ def test_no_escribe_en_data(base):
 def test_openapi_y_docs(base):
     st, o = gj(base, "/openapi.json")
     assert st == 200 and set(o["paths"]) == {"/api/health", "/api/meta", "/api/sinco/tree", "/api/sinco/search", "/api/sinco/{codigo}",
-                                            "/api/onet/occupations", "/api/onet/occupations/{soc}", "/api/crosswalk", "/api/crosswalk/schema"}
+                                            "/api/onet/occupations", "/api/onet/occupations/{soc}", "/api/crosswalk", "/api/crosswalk/schema",
+                                            "/api/probabilidad", "/api/probabilidad/{codigo}", "/api/download/conteo", "/api/download/dataset", "/api/resumen"}
     assert all(set(v) == {"get"} for v in o["paths"].values())  # sin escritura en el contrato
     assert not [k for k in llaves(o["paths"]) if PROHIBIDO.search(str(k))]
     assert get(base, "/docs")[0] == 200
@@ -265,6 +280,13 @@ def test_limites_de_busqueda_y_paginacion(base):
     assert gj(base, "/api/onet/occupations?limit=0")[1]["limit"] == 1
     assert len(gj(base, "/api/sinco/search?q=venta&limit=100000")[1]["resultados"]) <= 100
     assert len(gj(base, "/api/sinco/search?q=venta&limit=2")[1]["resultados"]) == 2
+
+
+def test_prohibido_sigue_prohibiendo_exposicion():
+    for k in ("exposure_score", "exposicion_ia", "score", "probabilidad_perdida_empleo", "frey_osborne_p", "probabilidad"):
+        assert PROHIBIDO.search(k), k
+    for k in ("probabilidad_automatizacion_fo", "probabilidad_automatizacion_fo_min", "/api/probabilidad/{codigo}"):
+        assert not PROHIBIDO.search(k), k
 
 
 def test_crosswalk_a1_se_sirve_con_similitud_sin_scores(monkeypatch, tmp_path, base):

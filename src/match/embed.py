@@ -23,6 +23,12 @@ def cargar_modelo(hf_id: str, revision: str, max_length: int, local_only: bool =
     return model
 
 
+def cargar_tokenizador(hf_id: str, revision: str):
+    """Solo el tokenizador (sin pesos): para reutilizar vectores en cache sin cargar el modelo."""
+    from transformers import AutoTokenizer
+    return AutoTokenizer.from_pretrained(hf_id, revision=revision, local_files_only=True)
+
+
 def codificar(model, textos: list[str], batch_size: int = 16) -> np.ndarray:
     """Vectores L2-normalizados, float32, en el orden de entrada."""
     v = model.encode(textos, batch_size=batch_size, convert_to_numpy=True, normalize_embeddings=True,

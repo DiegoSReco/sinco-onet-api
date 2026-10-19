@@ -25,8 +25,10 @@ def validar(cfg: dict) -> None:
         raise ValueError("config: estado_validacion debe ser 'sin_validar' (005 R.4.4)")
     if cfg["meta"]["modelo_principal"] not in cfg["modelos"]:
         raise ValueError("config: modelo_principal no esta en [modelos]")
+    if cfg["recuperacion"].get("k_top") != 2 or cfg["recuperacion"]["k_top"] > cfg["recuperacion"]["k"]:
+        raise ValueError("config: k_top debe ser 2 (aprobado 2026-10-19) y <= k")
     for nombre, m in cfg["modelos"].items():
-        for k in ("hf_id", "revision", "max_length", "delta", "tau"):
+        for k in ("hf_id", "revision", "max_length", "tau"):
             if k not in m:
                 raise ValueError(f"config: modelo {nombre} sin '{k}'")
         if len(m["revision"]) != 40:

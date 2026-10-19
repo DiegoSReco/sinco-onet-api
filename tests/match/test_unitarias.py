@@ -54,20 +54,36 @@ def test_topk_margen_y_empates_estables():
     assert np.allclose(s[0], [0.9, 0.9, 0.5])
 
 
-def test_conjunto_S_banderas_y_estado():
+def test_candidatos_top2_banderas_y_estado():
     rng = np.random.default_rng(0)
     sim = rng.random((50, 30)).astype(np.float32)
     top, res, umb = retrieve.candidatos(sim, [str(1000 + i) for i in range(50)], [f"11-{1000+j}.00" for j in range(30)],
-                                        k=10, delta=0.05, rango_max=5, q_baja=0.1, q_margen=0.1, q_sin=0.05)
+                                        k=10, k_top=2, q_baja=0.1, q_margen=0.1, q_sin=0.05)
     assert len(top) == 500
     assert top.groupby("sinco_code")["rango"].apply(lambda r: r.tolist() == list(range(1, 11))).all()
-    assert top[top.rango == 1]["en_conjunto"].all()          # el top-1 siempre esta en S
-    assert (top[top.en_conjunto]["rango"] <= 5).all()
-    assert (top[top.en_conjunto]["dif_con_top1"] <= 0.05 + 1e-9).all()
+    assert top[top.rango <= 2]["en_conjunto"].all() and not top[top.rango > 2]["en_conjunto"].any()
+    assert (top.groupby("sinco_code")["en_conjunto"].sum() == 2).all()
     assert set(res["match_status"]) <= {"ok", "baja_confianza", "sin_coincidencia"}
-    assert (res["n_conjunto"] >= 1).all()
+    assert (res["n_conjunto"] == 2).all()
     assert (res["sim_top1"] >= res["sim_top2"]).all()
     assert umb["sim_top1_sin_coincidencia"] <= umb["sim_top1_baja"]
+
+
+def test_agregacion_top2_ponderada_entre_los_dos():
+    from src.match import pfo
+    puente = {"11-1011.00": ["11-1011"], "11-1021.00": ["11-1021"]}
+    fo = {"11-1011": 0.2, "11-1021": 0.8}
+    r = pfo.agregar_sinco([0.70, 0.60], ["11-1011.00", "11-1021.00"], 0.05, puente, fo)
+    w = pfo.softmax([0.70, 0.60], 0.05)
+    assert r["n_candidatos"] == 2
+    assert abs(r["p_ponderada"] - (w[0] * 0.2 + w[1] * 0.8)) < 1e-12
+    assert abs(r["p_media"] - 0.5) < 1e-12 and r["p_min"] == 0.2 and r["p_max"] == 0.8 and r["p_top1"] == 0.2
+    assert abs(r["cobertura_peso_fo"] - 1) < 1e-12
+
+
+def test_config_k_top_2():
+    from src.match import config as C
+    assert C.cargar()["recuperacion"]["k_top"] == 2
 
 
 def test_tipo_relacion():

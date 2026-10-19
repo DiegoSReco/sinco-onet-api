@@ -33,6 +33,10 @@ def test_crosswalk_integridad_y_sin_scores(sinco):
     gu = set(sinco[sinco.nivel == "grupo_unitario"]["sinco_code"])
     assert set(df["sinco_code"]) == gu
     assert (df.groupby("sinco_code")["rango"].min() == 1).all()
+    # k_top = 2: exactamente los rangos 1 y 2 por grupo unitario
+    assert df["rango"].isin([1, 2]).all()
+    assert (df.groupby("sinco_code").size() == 2).all()
+    assert (df.groupby("sinco_code")["rango"].apply(lambda r: sorted(r) == [1, 2])).all()
 
 
 def test_api_acepta_el_crosswalk():
@@ -71,3 +75,17 @@ def test_candidatos_conservan_top_k():
     c = pd.read_parquet(CAND)
     assert c.groupby(["modelo", "sinco_code"]).size().eq(10).all()
     assert c["similitud"].between(-1.0001, 1.0001).all()
+    assert c.groupby(["modelo", "sinco_code"])["en_conjunto"].sum().eq(2).all()
+    assert c[c["en_conjunto"]]["rango"].isin([1, 2]).all()
+
+
+def test_pfo_usa_dos_candidatos():
+    df = pd.read_parquet(PF)
+    assert (df["n_candidatos"] == 2).all()
+
+
+def test_corridas_conserva_registro_previo_y_k_top():
+    df = pd.read_parquet(CO)
+    assert df["run_id"].nunique() >= 2
+    nuevo = df.sort_values("fecha").iloc[-1]
+    assert json.loads(nuevo["parametros"])["k_top"] == 2

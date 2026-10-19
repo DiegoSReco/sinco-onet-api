@@ -48,5 +48,16 @@
     "fecha_descarga": "2026-10-19",
     "bytes": 108052,
     "sha256": "8f026a33134bfde5770308d1c6117cf70d9dd41c2b3467e6dd271d65bdeecc5a"
+  },
+  {
+    "id": "ceballos_guadarrama_2025_pdf",
+    "url": "https://revistas.uniandes.edu.co/index.php/dys/article/view/11083/10931",
+    "archivo": "data/raw/Brechas salariales y automatización.docx.pdf",
+    "version": "Manuscrito PDF aportado por el usuario (el articulo se publico en Desarrollo y Sociedad num. 100, 2025; DOI 10.13043/DYS.100.1)",
+    "descripcion": "Ceballos Mina y Guadarrama Gomez, 'La automatizacion del empleo en Mexico y sus efectos sobre las disparidades salariales'. Referencia bibliografica; no es insumo de calculo.",
+    "fecha_descarga": "2026-10-19",
+    "bytes": 401370,
+    "sha256": "669e3c4b7ced7a2d1f428ccc28b26c07dd65e001e2af9c500c7be8ecc5510baa",
+    "nota": "Agregado manualmente por el usuario a data/raw el 2026-10-19; fecha_descarga es la fecha de registro. La version del PDF puede diferir de la publicada en la revista."
   }
 ]

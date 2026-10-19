@@ -1,6 +1,6 @@
 """Metodo A1: SINCO 2019 (es) -> O*NET-SOC (en) con embeddings multilingues y probabilidad F-O agregada.
 
-Uso:  .venv\\Scripts\\python -m src.match.run [--salida DIR] [--solo-modelo NOMBRE] [--local]
+Uso:  .venv\\Scripts\\python -m src.match.run [--salida DIR] [--solo-modelo NOMBRE] [--local] [--reusar-vectores]
 Variables: HF_HOME (cache de pesos fuera de git; por defecto ~/hf_cache).
 Todo resultado queda marcado estado_validacion = sin_validar. No calcula exposicion.
 """
@@ -54,8 +54,9 @@ def correr_modelo(nombre: str, cfg: dict, t: dict, local: bool, vec_dir: Path, r
     m = cfg["modelos"][nombre]
     seed = cfg["meta"]["seed"]
     embed.fijar_semilla(seed)
-    model = embed.cargar_modelo(m["hf_id"], m["revision"], m["max_length"], local_only=local)
-    tok = model.tokenizer
+    # Con --reusar-vectores NO se cargan pesos del modelo: solo el tokenizador (para reconstruir textos y huella).
+    model = None if reusar else embed.cargar_modelo(m["hf_id"], m["revision"], m["max_length"], local_only=local)
+    tok = embed.cargar_tokenizador(m["hf_id"], m["revision"]) if reusar else model.tokenizer
     d_s = texts.documentos_sinco(t, tok, m["max_length"], m["prefijo_consulta"], cfg["texto"]["max_ocupaciones_ejemplo"],
                                  cfg["texto"]["prioridad_truncamiento"])
     d_o = texts.documentos_onet(t["onet_ocupaciones"], tok, m["max_length"], m["prefijo_documento"])
@@ -67,6 +68,9 @@ def correr_modelo(nombre: str, cfg: dict, t: dict, local: bool, vec_dir: Path, r
         seg = json.loads(meta_p.read_text())["segundos"]
         desde_cache = True
     else:
+        if model is None:
+            raise SystemExit(f"[{nombre}] --reusar-vectores: la cache de vectores no coincide con la huella (modelo, revision, "
+                             "textos, semilla); recalcular exige cargar el modelo. Detenido.")
         t0 = time.time()
         q = embed.codificar(model, d_s["texto"].tolist())
         d = embed.codificar(model, d_o["texto"].tolist())
@@ -76,7 +80,8 @@ def correr_modelo(nombre: str, cfg: dict, t: dict, local: bool, vec_dir: Path, r
         meta_p.write_text(json.dumps({"huella": huella, "segundos": seg}))
     sim = retrieve.similitud(q, d)
     return {"nombre": nombre, "m": m, "q": q, "d": d, "sim": sim, "docs_s": d_s, "docs_o": d_o, "seg": seg, "desde_cache": desde_cache,
-            "dispositivo": str(model.device), "dtype": str(next(model.parameters()).dtype)}
+            "dispositivo": str(model.device) if model else "cpu (modelo no cargado; vectores en cache)",
+            "dtype": str(next(model.parameters()).dtype) if model else "float32 (vectores en cache)"}
 
 
 def main(argv=None) -> dict:
@@ -114,8 +119,8 @@ def main(argv=None) -> dict:
         sinco_codes = r["docs_s"]["sinco_code"].tolist()
         onet_codes = r["docs_o"]["onet_soc_code"].tolist()
         assert onet_codes == onet_codes_all
-        top, res, umb = retrieve.candidatos(r["sim"], sinco_codes, onet_codes, rec["k"], m["delta"],
-                                            rec["rango_max_conjunto"], rec["cuantil_baja_sim_top1"],
+        top, res, umb = retrieve.candidatos(r["sim"], sinco_codes, onet_codes, rec["k"], rec["k_top"],
+                                            rec["cuantil_baja_sim_top1"],
                                             rec["cuantil_bajo_margen"], rec["cuantil_sin_coincidencia"])
         r.update(top=top, res=res, umb=umb)
         res_modelos[nombre] = r
@@ -173,8 +178,9 @@ def main(argv=None) -> dict:
             "dispositivo": r["dispositivo"], "dtype": r["dtype"],
             "hash_matriz_sinco": embed.hash_matriz(r["q"]), "hash_matriz_onet": embed.hash_matriz(r["d"]),
             "hash_matriz_similitud": embed.hash_matriz(r["sim"]), "hash_config": hcfg,
-            "parametros": json.dumps({"k": rec["k"], "delta": m["delta"], "tau": m["tau"],
-                                      "rango_max_conjunto": rec["rango_max_conjunto"], "umbrales_calculados": umb,
+            "parametros": json.dumps({"k": rec["k"], "k_top": rec["k_top"], "tau": m["tau"],
+                                      "conjunto_candidato": "top-k_top por modelo (aprobado 2026-10-19; k_top=2)",
+                                      "umbrales_calculados": umb,
                                       "cuantiles": {k: v for k, v in rec.items() if k.startswith("cuantil")}},
                                      sort_keys=True),
             "estado_parametros": cfg["meta"]["estado_parametros"], "estado_validacion": "sin_validar",
@@ -189,8 +195,15 @@ def main(argv=None) -> dict:
     # columnas de trabajo internas fuera de la tabla final
     pfo_df = pfo_df.drop(columns=["p_ponderada", "p_media", "p_min", "p_max", "p_top1"])
     corr_df = pd.DataFrame(corridas)
+    # el registro de corridas anteriores se conserva (no se borra): se agregan las filas nuevas
+    corr_prev = out / "match_corridas.parquet"
+    if corr_prev.exists():
+        ant = pd.read_parquet(corr_prev)
+        ant = ant[~ant["run_id"].isin(corr_df["run_id"])]
+        schemas.validar_corridas(ant)
+        corr_df = pd.concat([ant, corr_df], ignore_index=True)
 
-    # crosswalk.parquet: modelo principal, conjunto S, sin columnas de score/probabilidad
+    # crosswalk.parquet: modelo principal, top-k_top (k_top=2), sin columnas de score/probabilidad
     sinco_codes_set, onet_codes_set = set(t["sinco"]["sinco_code"]), set(t["onet_ocupaciones"]["onet_soc_code"])
     cw = None
     if principal in res_modelos:
@@ -236,7 +249,8 @@ def main(argv=None) -> dict:
 
     # cobertura (cifras que usara el reporte; todo sale de este script)
     fo_en_puente = {s for ss in puente.values() for s in ss}
-    cob = {"run_id": run_id, "fecha": fecha,
+    cob = {"run_id": run_id, "fecha": fecha, "k_top": rec["k_top"],
+           "nota": "conjunto candidato = top-k_top por SINCO y por modelo; sin_validar",
            "fo_codigos_total": len(fo), "fo_codigos_fuera_del_puente": sorted(set(fo) - fo_en_puente),
            "puente_o_net_2019_con_varios_soc2010": sorted(k for k, v in puente.items() if len(v) > 1),
            "onet_sin_puente": sorted(set(onet_codes_all) - set(puente)),

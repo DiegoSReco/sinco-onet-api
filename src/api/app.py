@@ -1,7 +1,7 @@
 """API de solo lectura SINCO 2019 / O*NET con FastAPI (decision 004, opcion B).
 
-Reutiliza src/api/service.py sin cambios de logica. Solo GET/HEAD (otro metodo -> 405). Sin scores, exposicion ni
-probabilidades. Documentacion OpenAPI automatica en /docs y /openapi.json.
+Reutiliza src/api/service.py. Solo GET/HEAD (otro metodo -> 405). Sin scores ni exposicion. Unica probabilidad admitida:
+"probabilidad de automatizacion (Frey-Osborne)", rotulada y NO validada (decision del usuario 2026-10-19). Documentacion OpenAPI automatica en /docs y /openapi.json.
 
 Uso local (solo loopback):  python -m src.api.app --port 8001
 Variables de entorno (opcionales):
@@ -12,12 +12,16 @@ Variables de entorno (opcionales):
 from __future__ import annotations
 
 import argparse
+import io
+import json
 import mimetypes
 import os
 import re
 from pathlib import Path
 
-from fastapi import FastAPI, Query, Request
+from typing import Literal
+
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -32,6 +36,8 @@ MAX_Q = 100            # largo maximo de texto de busqueda
 MAX_OFFSET = 100_000
 LIMITE_BUSQUEDA_SINCO = 100
 RE_SINCO = re.compile(r"[1-9][0-9]{0,3}")
+MAX_OFFSET_PROB = 100_000
+TIPOS_DESCARGA = {"csv": "text/csv; charset=utf-8", "json": "application/json", "parquet": "application/vnd.apache.parquet"}
 RE_SOC = re.compile(r"[0-9]{2}-[0-9]{4}\.[0-9]{2}")
 HOSTS_POR_DEFECTO = ["127.0.0.1", "localhost", "[::1]", "::1"]
 
@@ -50,6 +56,16 @@ def _err(status: int, msg: str) -> JSONResponse:
     return JSONResponse({"error": msg}, status_code=status)
 
 
+def filtros(sinco_prefix: str | None = Query(None, max_length=4, pattern=r"^[1-9][0-9]{0,3}$", description="codigo o prefijo SINCO (1 a 4 digitos)"),
+            division: int | None = Query(None, ge=1, le=9),
+            nivel: Literal["division", "grupo_principal", "subgrupo", "grupo_unitario"] | None = Query(None),
+            q: str | None = Query(None, max_length=MAX_Q, description="texto, insensible a acentos (como /api/sinco/search)"),
+            modelo: str | None = Query(None, max_length=60, description="modelo de embeddings; por defecto el principal"),
+            solo_con_probabilidad: bool = Query(False)) -> dict:
+    """Filtros acotados compartidos por /api/probabilidad y /api/download/*."""
+    return dict(sinco_prefix=sinco_prefix, division=division, nivel=nivel, q=q, solo_con_probabilidad=solo_con_probabilidad, modelo=modelo)
+
+
 def create_app(cors_origins: list[str] | None = None, allowed_hosts: list[str] | None = None) -> FastAPI:
     cors_origins = _lista_env("SINCO_CORS_ORIGINS", []) if cors_origins is None else cors_origins
     allowed_hosts = _lista_env("SINCO_ALLOWED_HOSTS", HOSTS_POR_DEFECTO) if allowed_hosts is None else allowed_hosts
@@ -58,8 +74,8 @@ def create_app(cors_origins: list[str] | None = None, allowed_hosts: list[str] |
         title="API SINCO 2019 / O*NET (solo lectura)",
         version="0.2",
         description=("Catalogo SINCO 2019 (INEGI) y ocupaciones/tareas O*NET (USDOL/ETA, CC BY 4.0) y coincidencias SINCO-O*NET. "
-                     "Solo GET/HEAD. No devuelve scores, exposicion ni probabilidades. Las coincidencias automaticas (Metodo A1, "
-                     "embeddings) estan **sin validar**."),
+                     "Solo GET/HEAD. No devuelve scores ni exposicion. La unica probabilidad es la 'probabilidad de automatizacion "
+                     "(Frey-Osborne)', NO validada. Las coincidencias automaticas (Metodo A1, embeddings) estan **sin validar**."),
         docs_url="/docs", redoc_url=None, openapi_url="/openapi.json",
     )
 
@@ -144,6 +160,66 @@ def create_app(cors_origins: list[str] | None = None, allowed_hosts: list[str] |
     @ro("/api/crosswalk/schema", tags=["crosswalk"], summary="Esquema declarado de crosswalk.parquet")
     def crosswalk_schema():
         return S.crosswalk_schema()
+
+    # ---- probabilidad de automatizacion (Frey-Osborne): rotulada, NO validada
+    def _servicio(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except ValueError as e:
+            return _err(422, str(e))
+        except S.Indisponible as e:
+            return _err(409, str(e))
+
+    @ro("/api/probabilidad", tags=["probabilidad"], summary="Probabilidad de automatizacion (Frey-Osborne) por SINCO, paginada. NO validada")
+    def prob_lista(f: dict = Depends(filtros), limit: int = Query(50, description="1 a 200; se recorta"),
+                   offset: int = Query(0, ge=0, le=MAX_OFFSET_PROB)):
+        return _servicio(S.probabilidad_lista, limit=limit, offset=offset, **f)
+
+    @ro("/api/probabilidad/{codigo}", tags=["probabilidad"], summary="Probabilidad de automatizacion (Frey-Osborne) de un grupo SINCO. NO validada")
+    def prob_detalle(codigo: str, modelo: str | None = Query(None, max_length=60)):
+        if not RE_SINCO.fullmatch(codigo):
+            return _err(404, "codigo SINCO no encontrado")
+        return _servicio(S.probabilidad_detalle, codigo, modelo)
+
+    # ---- descarga del dataset (SINCO x O*NET + probabilidad si existe)
+    @ro("/api/download/conteo", tags=["descarga"], summary="Cuantas filas tendria la descarga con estos filtros")
+    def dl_conteo(f: dict = Depends(filtros), rango_max: int = Query(2, ge=1, le=2)):
+        r = _servicio(S.dataset, rango_max=rango_max, **f)
+        if isinstance(r, JSONResponse):
+            return r
+        _, info = r
+        return {k: info[k] for k in ("n_filas", "completo", "truncado", "tope_filas", "filtros", "probabilidad_automatizacion_fo", "modelo")}
+
+    @ro("/api/download/dataset", tags=["descarga"],
+        summary="Descarga el dataset completo o filtrado con sus matches (csv|json|parquet). NO validado")
+    def dl_dataset(f: dict = Depends(filtros), formato: Literal["csv", "json", "parquet"] = Query("csv"),
+                   rango_max: int = Query(2, ge=1, le=2, description="1 = solo el mejor match; 2 = top-2")):
+        r = _servicio(S.dataset, rango_max=rango_max, **f)
+        if isinstance(r, JSONResponse):
+            return r
+        df, info = r
+        if formato == "csv":
+            cuerpo = ("\ufeff" + S.csv_seguro(df).to_csv(index=False, lineterminator="\n")).encode("utf-8")
+        elif formato == "json":
+            cuerpo = json.dumps({"meta": info, "filas": json.loads(df.to_json(orient="records", force_ascii=False))},
+                                ensure_ascii=False).encode("utf-8")
+        else:
+            import pyarrow as pa
+            import pyarrow.parquet as pq
+            t = pa.Table.from_pandas(df, preserve_index=False)
+            t = t.replace_schema_metadata({**(t.schema.metadata or {}), b"atribucion": S.ATRIBUCION_DESCARGA.encode(),
+                                           b"meta": json.dumps(info, ensure_ascii=False).encode("utf-8")})
+            buf = io.BytesIO(); pq.write_table(t, buf, compression="zstd"); cuerpo = buf.getvalue()
+        nombre = f"sinco_onet_{'completo' if info['completo'] else 'filtrado'}.{formato}"   # fijo: nunca sale de la entrada
+        return Response(cuerpo, media_type=TIPOS_DESCARGA[formato], headers={
+            "Content-Disposition": f'attachment; filename="{nombre}"',
+            "X-Atribucion": S.ATRIBUCION_DESCARGA, "X-Filas": str(info["n_filas"]), "X-Filas-Truncadas": str(info["truncado"]).lower(),
+            "X-Probabilidad": info["probabilidad_automatizacion_fo"]["estado"]})
+
+    # ---- resumen: KPIs y barras de cuantos grupos SINCO hacen match con O*NET (todo calculado de las tablas)
+    @ro("/api/resumen", tags=["crosswalk"], summary="Resumen de coincidencias SINCO-O*NET: KPIs y datos de barras. Automaticas, NO validadas")
+    def resumen(modelo: str | None = Query(None, max_length=60, description="modelo de embeddings; por defecto el principal")):
+        return _servicio(S.resumen, modelo)
 
     @ro("/api/{resto:path}", include_in_schema=False)
     def api_404(resto: str):

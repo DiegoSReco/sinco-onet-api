@@ -10,14 +10,38 @@
 <header>
   <h1>SINCO 2019 &middot; O*NET</h1>
   <nav>
-    <button id="tab-sinco" class="on">Jerarquía SINCO</button>
+    <button id="tab-resumen" class="on">Resumen</button>
+    <button id="tab-sinco">Jerarquía SINCO</button>
     <button id="tab-onet">Ocupaciones O*NET</button>
     <button id="tab-meta">Fuentes</button>
   </nav>
-  <span class="aviso">Solo lectura. Sin scores ni exposición.</span>
+  <details id="descargar" class="desc">
+    <summary>Descargar</summary>
+    <form id="f-desc" class="panel-desc" onsubmit="return false">
+      <p class="sub">Una fila por grupo SINCO y O*NET emparejado (top-2), con la probabilidad de automatización (Frey-Osborne) si existe. Emparejamiento automático <b>NO validado</b>.</p>
+      <label><input type="radio" name="alcance" value="completo" checked> Dataset completo</label>
+      <label><input type="radio" name="alcance" value="filtrado"> Filtrado con la selección actual</label>
+      <fieldset id="filtros-desc" disabled>
+        <label>División <select id="d-division"><option value="">todas</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label>
+        <label>Código o prefijo SINCO <input id="d-prefijo" maxlength="4" inputmode="numeric" size="5"></label>
+        <label>Texto <input id="d-q" maxlength="100"></label>
+        <label><input type="checkbox" id="d-solo"> Solo SINCO con probabilidad</label>
+      </fieldset>
+      <label>Coincidencias por SINCO <select id="d-rango"><option value="2">2 (top-2)</option><option value="1">1 (la mejor)</option></select></label>
+      <label>Formato <select id="d-formato"><option value="csv">CSV</option><option value="json">JSON</option><option value="parquet">Parquet</option></select></label>
+      <div id="d-info" class="sub" aria-live="polite"></div>
+      <button id="d-ir" type="button">Descargar</button>
+      <div class="sub">O*NET (USDOL/ETA, CC BY 4.0) · SINCO 2019 (INEGI) · Frey y Osborne (2013/2017). Resultados de emparejamiento automático NO validados.</div>
+    </form>
+  </details>
+  <span class="aviso">Solo lectura. Sin exposición. Probabilidad F-O: NO validada.</span>
 </header>
 
-<main id="v-sinco">
+<main id="v-resumen" class="resumen">
+  <section class="centro" id="resumen" aria-live="polite"><p class="vacio">Cargando resumen…</p></section>
+</main>
+
+<main id="v-sinco" hidden>
   <section class="izq">
     <div class="barra">
       <input id="q-sinco" type="search" placeholder="Buscar código, título u ocupación ejemplo (p. ej. barista, 4213)">
