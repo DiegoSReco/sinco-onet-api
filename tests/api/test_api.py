@@ -19,8 +19,9 @@ from src.api.app import create_app
 ROOT = Path(__file__).resolve().parents[2]
 PROC = ROOT / "data" / "processed"
 # Decision del usuario 2026-10-19: solo se admite la probabilidad de automatizacion (Frey-Osborne): llaves
-# "probabilidad_automatizacion_fo*" y las rutas /api/probabilidad*. Exposicion y scores siguen prohibidos.
-_PROB_OK = re.compile(r"^(probabilidad_automatizacion_fo|/api/probabilidad)")
+# "probabilidad_automatizacion_fo*" y las rutas /api/probabilidad*. Decision 019 (usuario 2026-10-23): ademas se admite la exposicion
+# teorica por modelos SOLO bajo las llaves/rutas de abajo (rotulada, sin validar); los scores (E_g) siguen prohibidos.
+_PROB_OK = re.compile(r"^(probabilidad_automatizacion_fo|/api/probabilidad|exposicion_agentes|aviso_exposicion|exposicion_(media|rango)_modelos|/api/exposicion|/api/modelos/comparacion|/api/download/main)")
 _PROHIBIDO_RE = re.compile(r"(score|expos|prob|frey|osborne)", re.I)
 
 
@@ -245,7 +246,9 @@ def test_openapi_y_docs(base):
     st, o = gj(base, "/openapi.json")
     assert st == 200 and set(o["paths"]) == {"/api/health", "/api/meta", "/api/sinco/tree", "/api/sinco/search", "/api/sinco/{codigo}",
                                             "/api/onet/occupations", "/api/onet/occupations/{soc}", "/api/crosswalk", "/api/crosswalk/schema",
-                                            "/api/probabilidad", "/api/probabilidad/{codigo}", "/api/download/conteo", "/api/download/dataset", "/api/resumen"}
+                                            "/api/probabilidad", "/api/probabilidad/{codigo}", "/api/download/conteo", "/api/download/dataset", "/api/resumen",
+                                                "/api/conexiones/flujo", "/api/conexiones/{codigo}", "/api/onet/occupations/{soc}/sinco",
+                                                "/api/exposicion", "/api/exposicion/{codigo}", "/api/modelos/comparacion", "/api/download/main"}
     assert all(set(v) == {"get"} for v in o["paths"].values())  # sin escritura en el contrato
     assert not [k for k in llaves(o["paths"]) if PROHIBIDO.search(str(k))]
     assert get(base, "/docs")[0] == 200

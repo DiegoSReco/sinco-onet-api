@@ -59,5 +59,59 @@
     "bytes": 401370,
     "sha256": "669e3c4b7ced7a2d1f428ccc28b26c07dd65e001e2af9c500c7be8ecc5510baa",
     "nota": "Agregado manualmente por el usuario a data/raw el 2026-10-19; fecha_descarga es la fecha de registro. La version del PDF puede diferir de la publicada en la revista."
+  },
+  {
+    "id": "eloundou_2023_v5_pdf",
+    "url": "https://arxiv.org/abs/2303.10130",
+    "archivo": "data/raw/Founts/Eloundou_LaborMarket.pdf",
+    "version": "arXiv:2303.10130v5 (22 de agosto de 2023), working paper",
+    "descripcion": "Eloundou, Manning, Mishkin y Rock, 'GPTs are GPTs: An Early Look at the Labor Market Impact Potential of Large Language Models'. Referencia metodologica; no es insumo de calculo.",
+    "fecha_descarga": "2026-10-19",
+    "bytes": 2119311,
+    "sha256": "af3edd4efc120c70f0e2e6dc7a4e314a41f1b9eb5a7e88bc25533db631f79632",
+    "nota": "Agregado manualmente por el usuario a data/raw/Founts; fecha_descarga es la fecha de registro."
+  },
+  {
+    "id": "massenkoff_mccrory_2026_pdf",
+    "url": "https://www.anthropic.com/research/labor-market-impacts",
+    "archivo": "data/raw/Founts/Nowcasting_Econ-Report-v16.pdf",
+    "version": "Informe de Anthropic, 5 de marzo de 2026 (archivo Nowcasting_Econ-Report-v16.pdf)",
+    "descripcion": "Massenkoff y McCrory, 'Labor market impacts of AI: A new measure and early evidence'. Referencia metodologica; no es insumo de calculo.",
+    "fecha_descarga": "2026-10-19",
+    "bytes": 2419969,
+    "sha256": "48c941dbdc1053456ec72f893c6a27630559507d3882895bb036d034b6972450",
+    "nota": "Agregado manualmente por el usuario a data/raw/Founts; fecha_descarga es la fecha de registro."
+  },
+  {
+    "id": "ilo_research_brief_ai_exposure_2026_pdf",
+    "url": "https://doi.org/10.54394/00033279",
+    "archivo": "data/raw/Research Brief_Workers exposure to AI.pdf",
+    "version": "ILO Research Brief, febrero de 2026 (Merola, Ernst, Samaan, del Rio-Chanona, Teutloff)",
+    "descripcion": "'Workers' exposure to AI: What indicators tell us - and what they don't'. Tabla 1 (metodos de medicion de exposicion: expertos, patentes, GenAI) tomada de del Rio-Chanona et al. (2025). Referencia metodologica; no es insumo de calculo.",
+    "licencia": "CC BY 4.0 (c) Organizacion Internacional del Trabajo 2026",
+    "fecha_descarga": "2026-10-26",
+    "bytes": 665240,
+    "sha256": "1e85f993e4f9a9f1cf9698a2a6636ddba259aa136b02315e1f64492a16255104",
+    "nota": "Agregado manualmente por el usuario a data/raw; fecha_descarga es la fecha de registro."
+  },
+  {
+    "id": "enoe_2022_t3_csv_zip",
+    "url": "https://www.inegi.org.mx/contenidos/programas/enoe/15ymas/microdatos/enoe_n_2022_trim3_csv.zip",
+    "archivo": "data/raw/enoe/enoe_n_2022_trim3_csv.zip",
+    "version": "INEGI, ENOE-N 2022 trimestre 3 (microdatos csv)",
+    "descripcion": "Microdatos de la ENOE (SDEM, COE1T, COE2T, HOG, VIV). Insumo del analisis de exposicion (decision 020). No se publica en el repositorio.",
+    "fecha_descarga": "2026-10-26",
+    "bytes": 29571337,
+    "sha256": "fc47029e5b11943d3006929252e2d378c5f555bbaabe67d704a89c81878596e5"
+  },
+  {
+    "id": "enoe_2025_t3_csv_zip",
+    "url": "https://www.inegi.org.mx/contenidos/programas/enoe/15ymas/microdatos/enoe_2025_trim3_csv.zip",
+    "archivo": "data/raw/enoe/enoe_2025_trim3_csv.zip",
+    "version": "INEGI, ENOE 2025 trimestre 3 (microdatos csv)",
+    "descripcion": "Microdatos de la ENOE (SDEM, COE1T, COE2T, HOG, VIV). Insumo del analisis de exposicion (decision 020). No se publica en el repositorio.",
+    "fecha_descarga": "2026-10-26",
+    "bytes": 40062680,
+    "sha256": "d2817a14201694e119a3fd6fcb8b8ed7619ea7e26cf8b353761a1ac1f23d6022"
   }
 ]

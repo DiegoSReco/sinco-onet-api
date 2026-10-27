@@ -1,4 +1,4 @@
-# API de solo lectura SINCO 2019 / O*NET (sin exposicion; con probabilidad F-O rotulada y NO validada)
+# API de solo lectura SINCO 2019 / O*NET (exposicion teorica por modelos SIN validar; probabilidad F-O rotulada y NO validada)
 
 Decision: `docs/decisions/004-api-despliegue.md`. Servidor stdlib: sin paquetes nuevos. Servidor FastAPI: fastapi, starlette, uvicorn (aprobados por el usuario para la opcion B).
 
@@ -33,7 +33,8 @@ Enlaces directos: `/#4213` (nodo SINCO), `/#onet`, `/#meta`.
 ## Endpoints (solo GET/HEAD; otro metodo -> 405)
 /api/health, /api/meta, /api/sinco/tree, /api/sinco/{codigo}, /api/sinco/search?q=,
 /api/onet/occupations?q=&limit=&offset=, /api/onet/occupations/{soc}, /api/crosswalk?sinco_code=&onet_soc_code=, /api/crosswalk/schema,
-/api/probabilidad, /api/probabilidad/{codigo}, /api/download/conteo, /api/download/dataset (ver abajo)
+/api/probabilidad, /api/probabilidad/{codigo}, /api/download/conteo, /api/download/dataset (ver abajo),
+/api/exposicion, /api/exposicion/{codigo}, /api/modelos/comparacion, /api/download/main (exposicion por modelos; ver abajo)
 
 ## Crosswalk
 Lee `data/processed/crosswalk.parquet` (esquema: sinco_code, onet_soc_code, tipo_relacion, fuente, estado_validacion; opcionales
@@ -46,7 +47,7 @@ La interfaz muestra el aviso 'coincidencias automaticas sin validar (Metodo A1, 
 Regla vigente (cambio pedido por el usuario el 2026-10-19: "usa probabilidades en el repo"; el registro formal esta en
 `docs/decisions/009-top2-api-descarga-y-probabilidad.md`, que este README no edita): la **unica** probabilidad admitida es la
 "probabilidad de automatizacion (Frey-Osborne)", siempre rotulada asi y con `estado_validacion = sin_validar` ("NO validada"). No es exposicion
-a IA, ni riesgo de perdida de empleo, ni una estimacion para Mexico. **La exposicion y los scores siguen prohibidos** en endpoints e interfaz.
+a IA, ni riesgo de perdida de empleo, ni una estimacion para Mexico. **Los scores de otro tipo siguen prohibidos.** La unica excepcion para exposicion es la de abajo (decision 019, usuario 2026-10-23).
 Fuente: `data/processed/sinco_probabilidad_fo.parquet` (una fila por modelo y grupo unitario; el modelo principal lo marca `es_modelo_principal`).
 Si el archivo no existe (p. ej. repo publico solo con codigo y docs), el estado es `no_disponible` / "probabilidad no disponible", las columnas de
 probabilidad se omiten de las descargas y la interfaz muestra un estado vacio explicito, igual que el crosswalk pendiente.
@@ -58,6 +59,24 @@ probabilidad se omiten de las descargas y la interfaz muestra un estado vacio ex
 - Columnas de probabilidad (por SINCO, repetidas en sus 2 filas): `probabilidad_automatizacion_fo` (media ponderada por similitud, softmax sobre los 2 candidatos),
   `_media_uniforme`, `_min`, `_max`, `_top1`, `n_candidatos`, `cobertura_peso_fo`, `cobertura_fo`, `motivo_na` (causa del NA: `sin_coincidencia` o `sin_probabilidad_fo`),
   `probabilidad_es_na`, `probabilidad_estado_validacion`. Son NA cuando `match_status = sin_coincidencia` o el SOC 2010 alcanzado no tiene valor Frey-Osborne.
+
+## Exposicion teorica por modelos (decision 019)
+Regla vigente desde el 2026-10-23 (`docs/decisions/019-exposicion-agentes-en-api-y-tabla-main.md`): se muestra la exposicion que Haiku, Sonnet y Opus
+asignaron a las funciones de cada grupo SINCO (ruta S, 6 corridas base de `ann-s-v1`), **siempre** rotulada "sin validar; consistencia entre modelos, no
+exactitud". El indice de `exposure_class` es la medida principal de 001 con pesos iguales por funcion (la agregacion formal de la ruta S sigue pendiente), no es riesgo de perdida de empleo, ni una estimacion para Mexico; los tres modelos son de la misma familia. El crosswalk sigue sin
+admitir columnas de exposicion: la exposicion sale de `data/processed/main_sinco_comp_table.parquet`, que genera `python -m src.main_sinco_comp_table`
+(una fila por grupo unitario SINCO, 490; 457 con anotacion, los otros 33 no traen funciones en el PDF y quedan vacios, sin imputar).
+
+- `GET /api/exposicion?q=&sinco_prefix=&division=&orden=&solo_con_anotacion=&limit=&offset=`: listado paginado. `orden`: `codigo` (defecto), `exposicion_desc`, `exposicion_asc`, `desacuerdo_desc`.
+- `GET /api/exposicion/{codigo}`: un grupo unitario. `estado`: `disponible`, `sin_anotacion`, `sin_fila` (otros niveles), `no_disponible` (sin la tabla MAIN). `valores` trae: por modelo
+  (`exposure_idx`, `eloundou_idx`, clases, cuello fisico), `entre_modelos` (media simple de modelos no excluidos, min, max, rango; 018 R1.3), `acuerdo_funciones`, `b1`
+  (indice con intervalo al 90 %), `emparejamiento` (top-2 O*NET con `similitud` y `peso_softmax`) y `probabilidad_fo`.
+- `GET /api/modelos/comparacion`: kappa entre y dentro de modelos, alfa, regla de exclusion, sesgo por modelo de B1 con diagnosticos, sensibilidad al preambulo, control del cuello fisico,
+  reparto por corrida y medias por division. No expone `kappa_sobre_moda` (queda inflado; 018 R2.2).
+- `GET /api/download/main?formato=csv|json|parquet&sinco_prefix=&division=&q=&solo_con_anotacion=`: la tabla MAIN. Sin tabla -> 409.
+- Tambien: la llave `exposicion_agentes` en `/api/sinco/{codigo}` y `/api/conexiones/{codigo}`, `exposicion_media_modelos` en `/api/onet/occupations/{soc}/sinco`, y el estado en `/api/meta`.
+- **`peso_softmax` no es una probabilidad calibrada**: es `softmax(similitud / tau)` entre los 2 candidatos (`tau` provisional de `src/match/config.toml`), la misma ponderacion de la agregacion F-O.
+- Interfaz: la pestana **Modelos**, el bloque de comparacion en **Resumen** y la tarjeta de exposicion en el detalle de cada grupo.
 
 ### Descarga: `GET /api/download/dataset`
 Una fila por (grupo SINCO, O*NET emparejado), sin filtros = dataset completo (980 filas con el crosswalk top-2 actual). Columnas: `sinco_code, sinco_titulo, nivel, division,
@@ -105,3 +124,10 @@ Pestana inicial de la pagina principal (el sunburst, O*NET y Fuentes siguen en s
 - Interfaz: tarjetas KPI, barras apiladas por division (clic -> sunburst en esa division), barras por estado e histograma, en HTML/CSS propios (sin CDN; CSP sin cambios). Azul = con coincidencia, naranja rayado = baja confianza,
   gris = sin coincidencia (no se depende solo del color: leyenda, valores en las barras, `aria-label` y "Ver como tabla"). Tema claro/oscuro segun el sistema (`prefers-color-scheme`).
 - Pruebas: `tests/api/test_resumen.py`.
+
+## Conexiones SINCO <-> O*NET (vista "Conexiones")
+Solo lectura, mismo endurecimiento; sin exposicion (la unica llave de probabilidad es `probabilidad_automatizacion_fo`, NO validada). Pruebas: `tests/api/test_conexiones.py`.
+- `GET /api/conexiones/{codigo}`: un grupo unitario (4 digitos; otro -> 404): tarjeta SINCO (descripcion corta, ocupaciones ejemplo), anterior/siguiente, hermanos del subgrupo, hasta 2 coincidencias O*NET (titulo, descripcion corta, similitud, margen, `estado`: mejor_coincidencia | segunda_opcion | baja_confianza | sin_coincidencia), explicacion y probabilidad F-O. Sin crosswalk: `estado: pendiente` y `coincidencias: []`.
+- `GET /api/conexiones/flujo`: enlaces division SINCO -> gran grupo SOC (2 digitos del O*NET de rango 1), con numero de grupos. Los nombres SOC son la constante `SOC_GRANDES_GRUPOS` de `service.py` (fuente: BLS, SOC 2018).
+- `GET /api/onet/occupations/{soc}/sinco`: grupos SINCO que apuntan a una ocupacion O*NET, por similitud.
+- Interfaz: rutas por hash (`#conexiones/4213?div=4&soc=41`, `#onet/41-9091.00?q=sales&pag=2`, `#sinco/4213?raiz=4`), boton "Copiar enlace", buscador global (tecla `/`), guia "Como leer esto" y cinta (Sankey SVG propio) con tabla equivalente.

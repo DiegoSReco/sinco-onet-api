@@ -55,3 +55,17 @@ n_corridas = 3
 texto = "en"
 temperature_note = "solicitada 1.0, no controlable; valor por defecto de la sesion"
 # fecha de corte de capacidades = fecha de la corrida; se pasa como parametro explicito (--capability-cutoff / --date)
+
+[ruta_s]
+# Decision 015 sec. 3 (corrida completa, ruta S). Valores C/P pendientes de revision humana.
+prompt_version = "ann-s-v1"
+model = "claude-sonnet-5-5 (subagente Claude Code)"
+n_corridas = 3
+lote_grupos = 10                      # 015 3.6
+tope_funciones = 120                  # 015 3.6
+max_reintentos = 2                    # 015 3.7.5 (3 intentos en total)
+paralelo_max = 4                      # 015 3.7.8
+rationale_max_palabras = 25           # 015 3.3 (aviso, no invalida el lote)
+umbral_kappa = 0.60                   # 015 M27 (provisional)
+umbral_rechazo_primer_intento = 0.10  # 015 3.9 (alerta)
+temperature_note = "no controlable en subagentes; valor por defecto de la sesion"

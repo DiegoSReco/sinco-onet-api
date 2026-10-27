@@ -1,0 +1,11 @@
+# Frey-Osborne y puente O*NET-SOC: discrepancias de codigos y cobertura (informativo, no bloquea)
+
+Fuentes (ver data/raw/manifest.json): apendice de Frey & Osborne (2013) y `2010_to_2019_Crosswalk.csv` del O*NET Center. Datos extraidos tal cual; nada imputado.
+
+1. Frey-Osborne usa codigos que no son SOC 2010 estandar o no estan en el puente: 17 de sus 702 codigos no aparecen como SOC 2010 (primeros 7 caracteres de O*NET-SOC 2010) en el puente:
+   29-1060 Physicians and Surgeons; 29-1111 Registered Nurses (en SOC 2010 es 29-1141); 25-3999; 25-1000 Postsecondary Teachers; 29-9799; 39-4831; 15-1179; 15-1799; 29-2037; 13-1078; 29-2799; 49-9799; 31-9799; 15-1150; 47-4799; 45-2090; 51-9399.
+   Parecen codigos agregados/heredados (estilo OES o SOC 2000). No se corrigen; su emparejamiento con O*NET es decision de metodologia.
+2. O*NET 31.0 trae 1016 ocupaciones; 4 no estan en el puente 2019 porque son posteriores a la taxonomia 2019 del crosswalk: 15-1299.04 Penetration Testers, 15-1299.05 Information Security Engineers, 15-1299.06 Digital Forensics Analysts, 15-1299.07 Blockchain Engineers.
+3. El puente es 1:N / N:1: 1164 filas, 1110 codigos O*NET-SOC 2010 distintos, 1012 codigos 2019 distintos. Por la via puente (O*NET 2019 -> O*NET 2010 -> SOC 2010 -> Frey-Osborne), 811 de las 1016 ocupaciones O*NET 31.0 alcanzan al menos una probabilidad; 786 con un unico SOC 2010 y 25 con mas de uno (24 con probabilidades distintas). Resolver esas multiplicidades es decision de metodologia (no se resuelve aqui).
+4. Frey-Osborne: la etiqueta de entrenamiento (0/1) aparece en 70 filas (33 con 0, 37 con 1), coherente con "70 occupations, 10 percent" del apendice. El rango del apendice se conserva (rank_fo, 1..702).
+5. Extraccion: el apendice del PDF pierde la alineacion fila a fila en la salida con -layout (los rangos van desfasados respecto de los nombres); se emparejan por orden (k-esimo rango con el k-esimo codigo SOC), con verificacion de que cada pagina tiene igual numero de rangos y codigos y de valores conocidos del paper (Recreational Therapists 0.0028, Registered Nurses 0.009, Chief Executives 0.015, Lawyers 0.035, Cashiers 0.97, Telemarketers 0.99). Licencia: el PDF no declara ninguna.

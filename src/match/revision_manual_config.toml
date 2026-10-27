@@ -1,0 +1,24 @@
+# Revision manual de los matches SINCO -> O*NET de baja confianza / sin coincidencia (src/match/revision_manual.py).
+# POLITICA PROVISIONAL (ver docs/issues/revision-manual-2026-10-19-politica-provisional.md); la decision formal
+# la registra otro agente en docs/decisions/. El hash de este archivo queda en la tabla de corridas.
+
+[meta]
+estado_parametros = "provisional, sin calibrar"
+estado_validacion_manual = "revision_manual_1_revisor"   # un solo revisor, sin segunda lectura
+fuente_manual = "manual"
+motivo_na_ninguno = "sin_equivalente_onet_revision_manual"
+
+[exportacion]
+estados_incluidos = ["baja_confianza", "sin_coincidencia"]   # match_status del modelo principal
+top_candidatos_por_modelo = 5                # top-5 de bge-m3 y top-5 de e5; se unen sin duplicar (max 10 columnas cand)
+max_columnas_candidatos = 10
+max_chars_descripcion = 1500                 # recorte con "..." (documentado en el LEEME)
+max_chars_funciones = 2000                   # funciones unidas con " | "
+max_chars_ocupaciones = 600                  # ocupaciones ejemplo unidas con "; "
+
+[aplicacion]
+decisiones = ["ACEPTAR_RANGO1", "ACEPTAR_RANGO2", "ACEPTAR_AMBOS", "OTRO", "NINGUNO", "DUDA"]
+confianzas = ["alta", "media", "baja"]
+pesos_por_defecto = "uniforme"               # si el revisor no da pesos: uniformes entre los pares manuales
+aplica_a_modelo = "principal"                # solo se reemplazan pares y probabilidad del modelo principal
+umbral_sin_coincidencia_aplica = false       # si el revisor acepta/propone pares, la regla NA por sin_coincidencia no se aplica

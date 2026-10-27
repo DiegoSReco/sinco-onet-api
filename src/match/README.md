@@ -71,3 +71,9 @@ residuales, sin coincidencia, cobertura parcial, cuantiles por modelo). Ninguna 
 ## No implementado (fuera del alcance minimo de 005 R.4)
 Metodo B; variantes A2/A3; variante "titulo solo"; diagnostico `cobertura_funciones`; remuestreo de incertidumbre;
 ponderacion por empleo de EE. UU.; rerank con LLM; tabla de revision para la muestra de oro (005 no la pide en este alcance).
+
+## Revision manual (`revision_manual.py`, politica provisional)
+`python -m src.match.revision_manual exportar` genera `data/processed/revision_manual/` (CSV de revision de los grupos `baja_confianza` / `sin_coincidencia` del
+modelo principal, catalogo O*NET de consulta, LEEME, meta); `... aplicar archivo.csv` valida estrictamente y, si procede, reemplaza los pares automaticos de los grupos
+revisados y recalcula su probabilidad F-O (se archiva lo previo y se registra en `revision_manual_cambios.parquet` y `match_corridas`). No carga modelos. Politica y riesgos:
+`docs/issues/revision-manual-2026-10-19-politica-provisional.md`. Pruebas: `tests/match/test_revision_manual.py`.

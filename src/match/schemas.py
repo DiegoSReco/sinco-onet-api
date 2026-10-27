@@ -27,12 +27,12 @@ class CrosswalkFila(BaseModel):
     onet_soc_code: str = Field(pattern=r"^[0-9]{2}-[0-9]{4}\.[0-9]{2}$")
     tipo_relacion: Literal["1:1", "1:N", "N:1", "M:N"]
     fuente: str = Field(min_length=1)
-    estado_validacion: Literal["sin_validar"]
+    estado_validacion: Literal["sin_validar", "revision_manual_1_revisor"]
     notas: Optional[str] = None
     run_id: str
     modelo: str
-    rango: int = Field(ge=1)
-    similitud: float
+    rango: Optional[int] = Field(default=None, ge=1)   # NA solo en pares manuales fuera del top-2 automatico
+    similitud: Optional[float] = None                  # NA solo en pares manuales fuera de los candidatos guardados
     margen: float
     similitud_alt: Optional[float] = None
     rango_alt: Optional[int] = None
@@ -65,8 +65,8 @@ class PFoFila(BaseModel):
     probabilidad_automatizacion_fo_max: Optional[float] = Field(default=None, ge=0, le=1)
     probabilidad_automatizacion_fo_top1: Optional[float] = Field(default=None, ge=0, le=1)
     probabilidad_automatizacion_fo_ponderada_sin_filtro: Optional[float] = Field(default=None, ge=0, le=1)
-    motivo_na: Optional[Literal["sin_coincidencia", "sin_probabilidad_fo"]] = None
-    n_candidatos: int = Field(ge=1)
+    motivo_na: Optional[Literal["sin_coincidencia", "sin_probabilidad_fo", "sin_equivalente_onet_revision_manual"]] = None
+    n_candidatos: int = Field(ge=0)   # 0 solo si la revision manual declara que no hay equivalente en O*NET
     n_soc2010: int = Field(ge=0)
     n_soc2010_con_fo: int = Field(ge=0)
     cobertura_peso_fo: float = Field(ge=0, le=1.0000001)
@@ -84,7 +84,7 @@ class PFoFila(BaseModel):
     bandera_soc_sin_fo: bool
     residual_sin_funciones: bool
     residual_por_titulo: bool
-    estado_validacion: Literal["sin_validar"]
+    estado_validacion: Literal["sin_validar", "revision_manual_1_revisor"]
     etiqueta: str
 
 

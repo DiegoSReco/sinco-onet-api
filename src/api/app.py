@@ -1,7 +1,7 @@
 """API de solo lectura SINCO 2019 / O*NET con FastAPI (decision 004, opcion B).
 
-Reutiliza src/api/service.py. Solo GET/HEAD (otro metodo -> 405). Sin scores ni exposicion. Unica probabilidad admitida:
-"probabilidad de automatizacion (Frey-Osborne)", rotulada y NO validada (decision del usuario 2026-10-19). Documentacion OpenAPI automatica en /docs y /openapi.json.
+Reutiliza src/api/service.py. Solo GET/HEAD (otro metodo -> 405). Exposicion teorica por modelos (decision 019, usuario 2026-10-23): rotulada y SIN validar.
+Probabilidad admitida: "probabilidad de automatizacion (Frey-Osborne)", rotulada y NO validada (decision del usuario 2026-10-19). Documentacion OpenAPI automatica en /docs y /openapi.json.
 
 Uso local (solo loopback):  python -m src.api.app --port 8001
 Variables de entorno (opcionales):
@@ -74,8 +74,8 @@ def create_app(cors_origins: list[str] | None = None, allowed_hosts: list[str] |
         title="API SINCO 2019 / O*NET (solo lectura)",
         version="0.2",
         description=("Catalogo SINCO 2019 (INEGI) y ocupaciones/tareas O*NET (USDOL/ETA, CC BY 4.0) y coincidencias SINCO-O*NET. "
-                     "Solo GET/HEAD. No devuelve scores ni exposicion. La unica probabilidad es la 'probabilidad de automatizacion "
-                     "(Frey-Osborne)', NO validada. Las coincidencias automaticas (Metodo A1, embeddings) estan **sin validar**."),
+                     "Solo GET/HEAD. Incluye la exposicion teorica por anotacion de modelos (Haiku, Sonnet, Opus), SIN validar y que mide consistencia "
+                     "entre modelos, no exactitud; La probabilidad de automatizacion es la '(Frey-Osborne)', NO validada. Las coincidencias automaticas (Metodo A1, embeddings) estan **sin validar**."),
         docs_url="/docs", redoc_url=None, openapi_url="/openapi.json",
     )
 
@@ -153,6 +153,20 @@ def create_app(cors_origins: list[str] | None = None, allowed_hosts: list[str] |
         d = S.onet_detail(soc) if RE_SOC.fullmatch(soc) else None
         return d if d else _err(404, "ocupacion O*NET no encontrada")
 
+    @ro("/api/onet/occupations/{soc}/sinco", tags=["onet"], summary="SINCO que apuntan a una ocupacion O*NET (inverso del crosswalk). NO validado")
+    def onet_sinco(soc: str):
+        d = S.onet_sinco(soc) if RE_SOC.fullmatch(soc) else None
+        return d if d else _err(404, "ocupacion O*NET no encontrada")
+
+    @ro("/api/conexiones/flujo", tags=["conexiones"], summary="Flujo division SINCO -> gran grupo SOC (O*NET de rango 1). NO validado")
+    def conexiones_flujo():
+        return S.conexiones_flujo()
+
+    @ro("/api/conexiones/{codigo}", tags=["conexiones"], summary="Conexion de un grupo unitario SINCO con sus O*NET emparejados (top-2). NO validada")
+    def conexion(codigo: str):
+        d = S.conexion(codigo) if RE_SINCO.fullmatch(codigo) else None
+        return d if d else _err(404, "grupo unitario SINCO no encontrado")
+
     @ro("/api/crosswalk", tags=["crosswalk"], summary="Coincidencias SINCO-O*NET (automaticas, sin validar, salvo que diga otra cosa)")
     def crosswalk(sinco_code: str | None = Query(None, max_length=4), onet_soc_code: str | None = Query(None, max_length=10)):
         return S.crosswalk(sinco_code, onet_soc_code)
@@ -215,6 +229,50 @@ def create_app(cors_origins: list[str] | None = None, allowed_hosts: list[str] |
             "Content-Disposition": f'attachment; filename="{nombre}"',
             "X-Atribucion": S.ATRIBUCION_DESCARGA, "X-Filas": str(info["n_filas"]), "X-Filas-Truncadas": str(info["truncado"]).lower(),
             "X-Probabilidad": info["probabilidad_automatizacion_fo"]["estado"]})
+
+    # ---- exposicion del metodo de agentes (decision 019): rotulada, sin validar, consistencia entre modelos no exactitud
+    @ro("/api/exposicion", tags=["exposicion"], summary="Exposicion teorica por modelos (Haiku, Sonnet, Opus) por grupo SINCO, paginada. SIN validar")
+    def expo_lista(q: str | None = Query(None, max_length=MAX_Q), sinco_prefix: str | None = Query(None, max_length=4, pattern=r"^[1-9][0-9]{0,3}$"),
+                   division: int | None = Query(None, ge=1, le=9),
+                   orden: Literal["codigo", "exposicion_desc", "exposicion_asc", "desacuerdo_desc"] = Query("codigo"),
+                   solo_con_anotacion: bool = Query(False), limit: int = Query(50, description="1 a 200; se recorta"),
+                   offset: int = Query(0, ge=0, le=MAX_OFFSET)):
+        return _servicio(S.exposicion_lista, q=q, sinco_prefix=sinco_prefix, division=division, orden=orden,
+                         solo_con_anotacion=solo_con_anotacion, limit=limit, offset=offset)
+
+    @ro("/api/exposicion/{codigo}", tags=["exposicion"], summary="Exposicion por modelo, entre modelos, B1 y emparejamiento de un grupo unitario SINCO. SIN validar")
+    def expo_detalle(codigo: str):
+        if not RE_SINCO.fullmatch(codigo):
+            return _err(404, "codigo SINCO no encontrado")
+        return S.exposicion_detalle(codigo)
+
+    @ro("/api/modelos/comparacion", tags=["exposicion"], summary="Comparacion entre modelos, sesgo por modelo (B1) y sensibilidad al preambulo. SIN validar")
+    def modelos_comparacion():
+        return S.modelos_comparacion()
+
+    @ro("/api/download/main", tags=["descarga"], summary="Tabla MAIN por grupo unitario SINCO: emparejamiento, exposicion de los tres modelos, B1 y Frey-Osborne (csv|json|parquet)")
+    def dl_main(formato: Literal["csv", "json", "parquet"] = Query("csv"), q: str | None = Query(None, max_length=MAX_Q),
+                sinco_prefix: str | None = Query(None, max_length=4, pattern=r"^[1-9][0-9]{0,3}$"), division: int | None = Query(None, ge=1, le=9),
+                solo_con_anotacion: bool = Query(False)):
+        r = _servicio(S.main_dataset, sinco_prefix=sinco_prefix, division=division, q=q, solo_con_anotacion=solo_con_anotacion)
+        if isinstance(r, JSONResponse):
+            return r
+        df, info = r
+        if formato == "csv":
+            cuerpo = ("﻿" + S.csv_seguro(df).to_csv(index=False, lineterminator="\n")).encode("utf-8")
+        elif formato == "json":
+            cuerpo = json.dumps({"meta": info, "filas": json.loads(df.to_json(orient="records", force_ascii=False))}, ensure_ascii=False).encode("utf-8")
+        else:
+            import pyarrow as pa
+            import pyarrow.parquet as pq
+            t = pa.Table.from_pandas(df, preserve_index=False)
+            t = t.replace_schema_metadata({**(t.schema.metadata or {}), b"atribucion": S.ATRIBUCION_DESCARGA.encode(),
+                                           b"meta": json.dumps(info, ensure_ascii=False).encode("utf-8")})
+            buf = io.BytesIO(); pq.write_table(t, buf, compression="zstd"); cuerpo = buf.getvalue()
+        nombre = f"main_sinco_comp_table_{'completa' if info['completo'] else 'filtrada'}.{formato}"
+        return Response(cuerpo, media_type=TIPOS_DESCARGA[formato], headers={
+            "Content-Disposition": f'attachment; filename="{nombre}"', "X-Atribucion": S.ATRIBUCION_DESCARGA, "X-Filas": str(info["n_filas"]),
+            "X-Estado-Validacion": "sin_validar"})
 
     # ---- resumen: KPIs y barras de cuantos grupos SINCO hacen match con O*NET (todo calculado de las tablas)
     @ro("/api/resumen", tags=["crosswalk"], summary="Resumen de coincidencias SINCO-O*NET: KPIs y datos de barras. Automaticas, NO validadas")

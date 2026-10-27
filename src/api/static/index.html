@@ -3,70 +3,162 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
 <title>SINCO 2019 y O*NET: catálogo y coincidencias</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<header>
-  <h1>SINCO 2019 &middot; O*NET</h1>
-  <nav>
-    <button id="tab-resumen" class="on">Resumen</button>
-    <button id="tab-sinco">Jerarquía SINCO</button>
-    <button id="tab-onet">Ocupaciones O*NET</button>
-    <button id="tab-meta">Fuentes</button>
+<a class="saltar" href="#contenido" id="saltar">Saltar al contenido</a>
+<header class="top">
+  <div class="top-fila">
+    <h1 class="marca"><span class="m-s">SINCO</span><span class="m-f" aria-hidden="true">&#8596;</span><span class="m-o">O*NET</span></h1>
+    <div class="gsearch">
+      <label class="sr" for="q-global">Buscar en SINCO y O*NET</label>
+      <input id="q-global" type="search" role="combobox" aria-expanded="false" aria-controls="res-global" aria-autocomplete="list" autocomplete="off" maxlength="100" placeholder="Buscar en SINCO y O*NET (tecla /)">
+      <div id="res-global" class="resultados flotante" role="listbox" aria-label="Sugerencias" hidden></div>
+    </div>
+    <div class="acc">
+      <button id="copiar" type="button" class="btn-g" title="Copia el enlace de lo que estás viendo, con filtros">Copiar enlace</button>
+      <details id="descargar" class="desc">
+        <summary>Descargar datos</summary>
+        <form id="f-desc" class="panel-desc" aria-label="Descargar datos">
+          <p class="sub">Una fila por grupo SINCO y por O*NET emparejado, con la probabilidad de automatización (Frey-Osborne) si existe. Emparejamiento automático <b>NO validado</b>.</p>
+          <fieldset class="opciones">
+            <legend>1. ¿Qué descargar?</legend>
+            <label><input type="radio" name="alcance" value="completo" checked> Todo el conjunto de datos</label>
+            <label><input type="radio" name="alcance" value="filtrado"> Solo lo que estoy viendo <span class="sub">(se rellena con tu selección)</span></label>
+          </fieldset>
+          <fieldset id="filtros-desc" class="opciones" disabled>
+            <legend>Filtros</legend>
+            <label>División <select id="d-division"><option value="">todas</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label>
+            <label>Código o prefijo SINCO <input id="d-prefijo" maxlength="4" inputmode="numeric" size="5" autocomplete="off"></label>
+            <label>Texto <input id="d-q" maxlength="100" autocomplete="off"></label>
+            <label class="fila"><input type="checkbox" id="d-solo"> Solo SINCO con probabilidad</label>
+          </fieldset>
+          <fieldset class="opciones">
+            <legend>2. Opciones</legend>
+            <label>Coincidencias por grupo SINCO <select id="d-rango"><option value="2">las 2 mejores</option><option value="1">solo la mejor</option></select></label>
+            <label>Formato <select id="d-formato"><option value="csv">CSV (se abre en Excel)</option><option value="json">JSON (para programas)</option><option value="parquet">Parquet (análisis de datos)</option></select></label>
+          </fieldset>
+          <div id="d-info" class="d-info" role="status" aria-live="polite"></div>
+          <button id="d-ir" type="button" class="btn-p">Descargar</button>
+          <p class="sub">¿Quieres la tabla con la exposición de los tres modelos? <a href="/api/download/main?formato=csv" download>Tabla MAIN (CSV)</a> · <a href="/api/download/main?formato=parquet" download>Parquet</a>: una fila por grupo SINCO, sin validar.</p>
+          <div class="sub">O*NET (USDOL/ETA, CC BY 4.0) · SINCO 2019 (INEGI) · Frey y Osborne (2013/2017). Resultados de emparejamiento automático NO validados.</div>
+        </form>
+      </details>
+      <button id="tema" type="button" class="btn-g" aria-label="Cambiar tema de color">Tema: auto</button>
+    </div>
+  </div>
+  <nav id="nav" aria-label="Secciones">
+    <button id="tab-resumen" type="button" class="on">Resumen</button>
+    <button id="tab-modelos" type="button">Modelos</button>
+    <button id="tab-conexiones" type="button">Conexiones</button>
+    <button id="tab-sinco" type="button">Jerarquía SINCO</button>
+    <button id="tab-onet" type="button">Ocupaciones O*NET</button>
+    <button id="tab-meta" type="button">Fuentes</button>
   </nav>
-  <details id="descargar" class="desc">
-    <summary>Descargar</summary>
-    <form id="f-desc" class="panel-desc" onsubmit="return false">
-      <p class="sub">Una fila por grupo SINCO y O*NET emparejado (top-2), con la probabilidad de automatización (Frey-Osborne) si existe. Emparejamiento automático <b>NO validado</b>.</p>
-      <label><input type="radio" name="alcance" value="completo" checked> Dataset completo</label>
-      <label><input type="radio" name="alcance" value="filtrado"> Filtrado con la selección actual</label>
-      <fieldset id="filtros-desc" disabled>
-        <label>División <select id="d-division"><option value="">todas</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label>
-        <label>Código o prefijo SINCO <input id="d-prefijo" maxlength="4" inputmode="numeric" size="5"></label>
-        <label>Texto <input id="d-q" maxlength="100"></label>
-        <label><input type="checkbox" id="d-solo"> Solo SINCO con probabilidad</label>
-      </fieldset>
-      <label>Coincidencias por SINCO <select id="d-rango"><option value="2">2 (top-2)</option><option value="1">1 (la mejor)</option></select></label>
-      <label>Formato <select id="d-formato"><option value="csv">CSV</option><option value="json">JSON</option><option value="parquet">Parquet</option></select></label>
-      <div id="d-info" class="sub" aria-live="polite"></div>
-      <button id="d-ir" type="button">Descargar</button>
-      <div class="sub">O*NET (USDOL/ETA, CC BY 4.0) · SINCO 2019 (INEGI) · Frey y Osborne (2013/2017). Resultados de emparejamiento automático NO validados.</div>
-    </form>
-  </details>
-  <span class="aviso">Solo lectura. Sin exposición. Probabilidad F-O: NO validada.</span>
 </header>
+<div class="franja" role="note"><b>Solo lectura.</b> Las coincidencias son automáticas y no están validadas. La exposición por modelos (Haiku, Sonnet, Opus) es teórica y está sin validar: mide consistencia entre modelos, no exactitud ni riesgo de pérdida de empleo. <a href="#resumen/guia" id="ver-guia">Cómo leer esto</a></div>
+<div id="estado-sr" class="sr" role="status" aria-live="polite"></div>
+
+<div id="contenido" tabindex="-1"></div>
 
 <main id="v-resumen" class="resumen">
-  <section class="centro" id="resumen" aria-live="polite"><p class="vacio">Cargando resumen…</p></section>
+  <section class="centro">
+    <details id="guia" class="guia" open>
+      <summary>Cómo leer esto</summary>
+      <div class="guia-grid">
+        <div><h3>SINCO 2019</h3><p>La clasificación oficial de ocupaciones de México (INEGI). Se organiza en niveles; el más detallado es el <b>grupo unitario</b>.</p></div>
+        <div><h3>O*NET</h3><p>La base de datos de ocupaciones de Estados Unidos, con sus tareas. Está en inglés.</p></div>
+        <div><h3>Similitud</h3><p>Qué tan parecidos son los textos de un grupo SINCO y de una ocupación O*NET, en una escala de 0 a 1. Es un número de comparación, no una probabilidad ni un porcentaje de acierto.</p></div>
+        <div><h3>Coincidencia</h3><p>La ocupación O*NET más parecida a un grupo SINCO. Cada grupo tiene hasta dos: la mejor y una segunda opción.</p></div>
+        <div><h3>Baja confianza</h3><p>Hay propuesta, pero la similitud es modesta o hay otra opción casi igual. Conviene revisarla antes de usarla.</p></div>
+        <div><h3>Sin coincidencia</h3><p>Ningún O*NET fue lo bastante parecido. Se muestran los candidatos más cercanos solo como referencia.</p></div>
+      </div>
+      <p class="guia-no"><b>Nada de esto es riesgo de perder el empleo.</b> Las coincidencias muestran qué ocupación estadounidense se parece a cada grupo mexicano, calculado de forma automática y sin validar. La <b>exposición por modelos</b> es una anotación teórica de Haiku, Sonnet y Opus sobre las funciones de cada grupo: mide qué tanto coinciden entre sí, no qué tan exacta es, y también está sin validar. La probabilidad de automatización (Frey-Osborne), cuando aparece, es de otra fuente, de Estados Unidos, y tampoco está validada.</p>
+      <div class="guia-acc">
+        <button type="button" class="btn-p" id="guia-conexiones">Explorar conexiones</button>
+        <button type="button" class="btn-g" id="guia-buscar">Buscar un grupo u ocupación</button>
+      </div>
+    </details>
+    <div id="resumen" aria-live="polite"><div class="esq" aria-hidden="true"></div><p class="vacio">Cargando resumen…</p></div>
+    <section id="resumen-modelos" class="resumen-modelos" aria-labelledby="rm-h" aria-live="polite"><div class="esq" aria-hidden="true"></div></section>
+  </section>
+</main>
+
+<main id="v-modelos" class="resumen" hidden>
+  <section class="centro">
+    <h2 class="vh" tabindex="-1">Comparación entre modelos</h2>
+    <p class="intro">Cómo se comparan Haiku, Sonnet y Opus al anotar la exposición de cada grupo SINCO, cuánto sesgo se estima por modelo y qué grupos conviene mirar. <b>Sin validar; consistencia entre modelos, no exactitud.</b></p>
+    <div id="modelos-c" aria-live="polite"></div>
+  </section>
+</main>
+
+<main id="v-conexiones" class="resumen" hidden>
+  <section class="centro">
+    <h2 class="vh" tabindex="-1">Conexiones SINCO &#8596; O*NET</h2>
+    <p class="intro">Elige un grupo SINCO y mira con qué ocupaciones de O*NET se parece más. <span class="sub">Atajos: flechas &larr; &rarr; cambian de grupo, <kbd>/</kbd> busca.</span></p>
+    <div class="picker">
+      <div class="picker-in">
+        <label for="q-con">Grupo SINCO (código o título)</label>
+        <input id="q-con" type="search" role="combobox" aria-expanded="false" aria-controls="res-con" aria-autocomplete="list" autocomplete="off" maxlength="100" placeholder="p. ej. 4213, o escribe «cocinero»">
+        <div id="res-con" class="resultados flotante" role="listbox" aria-label="Grupos SINCO" hidden></div>
+      </div>
+      <div class="picker-nav">
+        <button type="button" id="con-ant" class="btn-g" disabled>&larr; Anterior</button>
+        <button type="button" id="con-sig" class="btn-g" disabled>Siguiente &rarr;</button>
+        <button type="button" id="con-azar" class="btn-g">Uno al azar</button>
+      </div>
+    </div>
+    <div id="con-herm" class="herm" hidden></div>
+    <div id="con-lienzo" aria-live="polite"></div>
+    <div id="con-extra"></div>
+    <section class="panorama" aria-labelledby="pan-h">
+      <h3 id="pan-h">Panorama: de las divisiones SINCO a los grandes grupos de ocupaciones de EE. UU.</h3>
+      <p class="sub">Cada cinta une una división SINCO con el gran grupo SOC al que pertenece el O*NET de mejor coincidencia de sus grupos. El ancho es el número de grupos SINCO. Haz clic en una división, un grupo SOC o una cinta para filtrar.</p>
+      <div id="flujo" aria-live="polite"><div class="esq" aria-hidden="true"></div></div>
+    </section>
+  </section>
 </main>
 
 <main id="v-sinco" hidden>
   <section class="izq">
+    <h2 class="vh" tabindex="-1">Jerarquía SINCO</h2>
     <div class="barra">
-      <input id="q-sinco" type="search" placeholder="Buscar código, título u ocupación ejemplo (p. ej. barista, 4213)">
-      <button id="btn-raiz">Inicio</button>
+      <label class="sr" for="q-sinco">Buscar en la jerarquía SINCO</label>
+      <div class="rel grow">
+        <input id="q-sinco" type="search" role="combobox" aria-expanded="false" aria-controls="res-sinco" aria-autocomplete="list" autocomplete="off" maxlength="100" placeholder="Buscar código, título u ocupación (p. ej. barista, 4213)">
+        <div id="res-sinco" class="resultados flotante" role="listbox" aria-label="Resultados" hidden></div>
+      </div>
+      <button id="btn-raiz" type="button" class="btn-g">Inicio</button>
+      <button id="btn-con" type="button" class="btn-p" disabled title="Elige un grupo unitario (anillo exterior)">Ver conexiones</button>
     </div>
-    <div id="ruta" class="ruta"></div>
-    <div id="res-sinco" class="resultados" hidden></div>
-    <svg id="sun" viewBox="-300 -300 600 600" role="img" aria-label="Jerarquía SINCO 2019"></svg>
+    <div id="ruta" class="ruta" aria-label="Ruta"></div>
+    <svg id="sun" viewBox="-300 -300 600 600" role="img" aria-label="Diagrama de la jerarquía SINCO 2019: de dentro hacia fuera, división, grupo principal, subgrupo y grupo unitario. Usa la lista de abajo para navegar con teclado."></svg>
     <div class="leyenda" id="leyenda"></div>
+    <details class="r-det" id="sun-lista-d"><summary>Ver como lista</summary><div id="sun-lista" class="sun-lista"></div></details>
   </section>
-  <aside class="der" id="detalle"><p class="vacio">Haga clic en un sector del diagrama. Anillos de dentro hacia fuera: división, grupo principal, subgrupo, grupo unitario.</p></aside>
+  <aside class="der" id="detalle" aria-live="polite"><p class="vacio">Haz clic en un sector del diagrama. Anillos de dentro hacia fuera: división, grupo principal, subgrupo y grupo unitario. Con el grupo unitario elegido podrás ver sus conexiones con O*NET.</p></aside>
 </main>
 
 <main id="v-onet" hidden>
   <section class="izq">
-    <div class="barra"><input id="q-onet" type="search" placeholder="Buscar ocupación O*NET (título, código o descripción, en inglés)"></div>
-    <div id="lista-onet" class="lista"></div>
-    <div class="barra"><button id="onet-prev">&larr;</button><span id="onet-pag"></span><button id="onet-next">&rarr;</button></div>
+    <h2 class="vh" tabindex="-1">Ocupaciones O*NET</h2>
+    <div class="barra">
+      <label class="sr" for="q-onet">Buscar ocupación O*NET</label>
+      <input id="q-onet" type="search" class="grow" autocomplete="off" maxlength="100" placeholder="Buscar ocupación O*NET (en inglés: título, código o descripción)">
+    </div>
+    <div id="lista-onet" class="lista" aria-live="polite"></div>
+    <div class="barra pag"><button id="onet-prev" type="button" class="btn-g" aria-label="Página anterior">&larr;</button><span id="onet-pag" role="status"></span><button id="onet-next" type="button" class="btn-g" aria-label="Página siguiente">&rarr;</button></div>
   </section>
-  <aside class="der" id="detalle-onet"><p class="vacio">Seleccione una ocupación O*NET para ver su descripción y tareas.</p></aside>
+  <aside class="der" id="detalle-onet" aria-live="polite"><p class="vacio">Elige una ocupación O*NET para ver su descripción, sus tareas y qué grupos SINCO apuntan a ella.</p></aside>
 </main>
 
-<main id="v-meta" hidden><section class="centro" id="meta"></section></main>
+<main id="v-meta" hidden><section class="centro" id="meta"><h2 class="vh" tabindex="-1">Fuentes y estado</h2><div id="meta-c"></div></section></main>
 
-<div id="tip" class="tip" hidden></div>
+<div id="tip" class="tip" hidden role="tooltip"></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="/modelos.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

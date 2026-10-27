@@ -29,14 +29,24 @@ def test_crosswalk_integridad_y_sin_scores(sinco):
     onet = pd.read_parquet(PROC / "onet_ocupaciones.parquet")
     schemas.validar_crosswalk(df, set(sinco["sinco_code"]), set(onet["onet_soc_code"]))
     assert not [c for c in df.columns if schemas.PROHIBIDAS_CROSSWALK.search(c)]
-    assert (df["estado_validacion"] == "sin_validar").all()
+    # filas manuales (src/match/revision_manual.py, politica provisional): fuente 'manual' y estado propio; el resto sin_validar
+    man = df["fuente"] == "manual"
+    assert (df.loc[~man, "estado_validacion"] == "sin_validar").all()
+    assert (df.loc[man, "estado_validacion"] == "revision_manual_1_revisor").all()
     gu = set(sinco[sinco.nivel == "grupo_unitario"]["sinco_code"])
-    assert set(df["sinco_code"]) == gu
-    assert (df.groupby("sinco_code")["rango"].min() == 1).all()
-    # k_top = 2: exactamente los rangos 1 y 2 por grupo unitario
-    assert df["rango"].isin([1, 2]).all()
-    assert (df.groupby("sinco_code").size() == 2).all()
-    assert (df.groupby("sinco_code")["rango"].apply(lambda r: sorted(r) == [1, 2])).all()
+    # grupos sin filas = solo los que la revision manual declaro sin equivalente en O*NET
+    sin_filas = gu - set(df["sinco_code"])
+    if sin_filas:
+        p = pd.read_parquet(PF)
+        assert set(p[(p.sinco_code.isin(sin_filas)) & (p.modelo == p[p.es_modelo_principal].modelo.iloc[0])]["motivo_na"]) == {
+            "sin_equivalente_onet_revision_manual"}
+    assert set(df["sinco_code"]) <= gu
+    # k_top = 2: grupos automaticos con exactamente los rangos 1 y 2
+    aut = df[~df["sinco_code"].isin(df.loc[man, "sinco_code"])]
+    assert aut["rango"].isin([1, 2]).all()
+    assert (aut.groupby("sinco_code").size() == 2).all()
+    assert (aut.groupby("sinco_code")["rango"].apply(lambda r: sorted(r) == [1, 2])).all()
+    assert df.loc[man, "rango"].dropna().isin([1, 2]).all()
 
 
 def test_api_acepta_el_crosswalk():
@@ -53,7 +63,7 @@ def test_tabla_pfo_esquema_e_integridad(sinco):
     schemas.validar_pfo(df, set(sinco["sinco_code"]))
     assert "probabilidad_automatizacion_fo" in df.columns
     assert not [c for c in df.columns if re.search(r"expos|riesgo", c, re.I)]
-    assert (df["estado_validacion"] == "sin_validar").all()
+    assert df["estado_validacion"].isin(["sin_validar", "revision_manual_1_revisor"]).all()
     assert (df["etiqueta"] == "probabilidad de automatizacion (Frey-Osborne)").all()
     d = df.dropna(subset=["probabilidad_automatizacion_fo"])
     assert d["probabilidad_automatizacion_fo"].between(0, 1).all()
@@ -81,11 +91,13 @@ def test_candidatos_conservan_top_k():
 
 def test_pfo_usa_dos_candidatos():
     df = pd.read_parquet(PF)
-    assert (df["n_candidatos"] == 2).all()
+    aut = df[df["estado_validacion"] == "sin_validar"]
+    assert (aut["n_candidatos"] == 2).all()
+    assert df.loc[df["estado_validacion"] != "sin_validar", "n_candidatos"].between(0, 2).all()
 
 
 def test_corridas_conserva_registro_previo_y_k_top():
     df = pd.read_parquet(CO)
-    assert df["run_id"].nunique() >= 2
-    nuevo = df.sort_values("fecha").iloc[-1]
+    assert df[df["metodo"] == "A1"]["run_id"].nunique() >= 2
+    nuevo = df[df["metodo"] == "A1"].sort_values("fecha").iloc[-1]
     assert json.loads(nuevo["parametros"])["k_top"] == 2

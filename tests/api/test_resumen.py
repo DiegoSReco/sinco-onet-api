@@ -136,4 +136,4 @@ def test_pagina_principal_tiene_resumen_sin_cifras_fijas(api):
     html = api.get("/").text; js = api.get("/app.js").text
     assert 'id="v-resumen"' in html and 'id="tab-resumen"' in html and 'id="v-sinco"' in html
     assert "/api/resumen" in js and "490" not in html and "1016" not in js and "1,016" not in js
-    assert "NO validadas" in js and "≠ exposición a IA" in js
+    assert "NO validadas" in js and "no es la exposición por modelos" in js

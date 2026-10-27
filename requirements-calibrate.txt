@@ -1,0 +1,5 @@
+# Dependencias opcionales de src/calibrate/b1_numpyro.py (decision 016, Enmienda 1). Python 3.14, Windows.
+# Instalar: .venv\Scripts\python -m pip install -r requirements-calibrate.txt
+numpyro==0.22.0
+jax==0.12.0.1
+jaxlib==0.12.0.1

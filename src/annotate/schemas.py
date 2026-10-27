@@ -106,3 +106,104 @@ def read_parquet(path) -> list[Annotation]:
     recs = [Annotation(**row) for row in t.to_pylist()]
     validar_unicidad(recs)
     return recs
+
+
+# ---------------------------------------------------------------------------
+# Ruta S (decision 015, E-5 / E-5b): la unidad es la funcion SINCO. No modifica el esquema de la ruta O.
+# ---------------------------------------------------------------------------
+EloundouClass = Literal["EL0", "EL1", "EL2", "EL3"]
+Sha256 = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
+SincoCode = Annotated[str, StringConstraints(pattern=r"^\d{4}$")]
+FunctionId = Annotated[str, StringConstraints(pattern=r"^\d{4}-\d{2,3}$")]
+RATIONALE_S_MAX = 600
+
+
+class ModelOutputS(BaseModel):
+    """Una linea de la respuesta del subagente (ruta S). Estricto: sin claves extra ni puntajes."""
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+
+    function_id: FunctionId
+    exposure_class: ExposureClass
+    eloundou_class: EloundouClass
+    physical_bottleneck: bool
+    confidence: Confidence
+    rationale: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=RATIONALE_S_MAX)]
+
+
+class AnnotationS(BaseModel):
+    """Ruta S: un registro por (run_id, sinco_code, orden). Campos de ruta O (onet_soc, task_id, ...) nulos."""
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+
+    run_id: RunId
+    route: Literal["S"] = "S"
+    prompt_version: Texto
+    prompt_sha256: Sha256
+    model: Texto
+    run_date: dt.date
+    batch_id: Texto
+    batch_date: dt.date                            # fecha en que se anoto/importo el lote
+    attempt: int = Field(ge=1)
+    sinco_code: SincoCode
+    orden: int = Field(ge=1)
+    function_text_es: Texto
+    item_fusionado: bool
+    source_sha256: Sha256
+    annotated_text_lang: Literal["es"] = "es"
+    exposure_class: ExposureClass
+    eloundou_class: EloundouClass
+    physical_bottleneck: bool
+    confidence: Confidence
+    rationale: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=RATIONALE_S_MAX)]
+    capability_cutoff: Texto
+    temperature_requested: Optional[float] = Field(default=None, ge=0, le=2)
+    temperature_controlled: bool = False
+    temperature_note: Optional[Texto] = None
+    # Nulos por construccion en la ruta S (E-5)
+    onet_soc: None = None
+    task_id: None = None
+    task_text_en: None = None
+    task_text_es: None = None
+    task_type: None = None
+    onet_version: None = None
+
+
+def validar_unicidad_s(records: list[AnnotationS]) -> None:
+    vistos = set()
+    for r in records:
+        k = (r.run_id, r.sinco_code, r.orden)
+        if k in vistos:
+            raise ValueError(f"registro duplicado para (run_id, sinco_code, orden) = {k}")
+        vistos.add(k)
+
+
+ARROW_SCHEMA_S = pa.schema([
+    ("run_id", pa.string()), ("route", pa.string()), ("prompt_version", pa.string()), ("prompt_sha256", pa.string()),
+    ("model", pa.string()), ("run_date", pa.date32()), ("batch_id", pa.string()), ("batch_date", pa.date32()), ("attempt", pa.int32()),
+    ("sinco_code", pa.string()), ("orden", pa.int32()), ("function_text_es", pa.string()),
+    ("item_fusionado", pa.bool_()), ("source_sha256", pa.string()), ("annotated_text_lang", pa.string()),
+    ("exposure_class", pa.string()), ("eloundou_class", pa.string()), ("physical_bottleneck", pa.bool_()),
+    ("confidence", pa.string()), ("rationale", pa.string()), ("capability_cutoff", pa.string()),
+    ("temperature_requested", pa.float64()), ("temperature_controlled", pa.bool_()), ("temperature_note", pa.string()),
+    ("onet_soc", pa.string()), ("task_id", pa.string()), ("task_text_en", pa.string()),
+    ("task_text_es", pa.string()), ("task_type", pa.string()), ("onet_version", pa.string()),
+])
+
+
+def write_parquet_s(records: list[AnnotationS], path, overwrite: bool = False) -> None:
+    from pathlib import Path
+    path = Path(path)
+    validar_unicidad_s(records)
+    if path.exists() and not overwrite:
+        raise FileExistsError(f"{path} ya existe; una corrida no se sobrescribe")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    cols = {n: [getattr(r, n) for r in records] for n in ARROW_SCHEMA_S.names}
+    pq.write_table(pa.table(cols, schema=ARROW_SCHEMA_S), path)
+
+
+def read_parquet_s(path) -> list[AnnotationS]:
+    t = pq.read_table(path)
+    if t.schema.names != ARROW_SCHEMA_S.names:
+        raise ValueError(f"columnas distintas del esquema ruta S: {t.schema.names}")
+    recs = [AnnotationS(**row) for row in t.to_pylist()]
+    validar_unicidad_s(recs)
+    return recs

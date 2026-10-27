@@ -1,0 +1,60 @@
+# Configuracion de src/calibrate/ (decision 012, B1: error de medicion tipo Dawid-Skene).
+# TODO valor marcado PROVISIONAL carece de decision humana (ver docs/issues/calibracion-2026-10-19-parametros-provisionales.md).
+# Los umbrales de "piloto" NO se repiten aqui: se leen de src/score/config.toml ([piloto]).
+
+[campos.exposure_class]
+# Campo ordinal de 001 (E0 < E1 < E2). Orden = orden ordinal.
+clases = ["E0", "E1", "E2"]
+
+[campos.eloundou_class]
+# Campo de 011 sec. 5 (E-2, NO aplicado aun al esquema Annotation; se lee de parquet con esas columnas).
+# 012: EL3 se funde en EL2 (alineado con 011: cota_sup_S cuenta EL3 dentro de EL2). PROVISIONAL.
+clases = ["EL0", "EL1", "EL2"]
+fusion = { EL3 = "EL2" }
+
+[muestreo]
+# PROVISIONAL: sin decision; verificar convergencia (R-hat, ESS) en cada corrida.
+semilla = 20261019
+n_cadenas = 4
+n_iter = 3000          # iteraciones totales por cadena, incluido el descarte
+descarte = 1000        # burn-in
+adelgazamiento = 2     # se guarda 1 de cada 'adelgazamiento'
+
+[prior]
+seleccion = "debil"    # debil | fuerte (PROVISIONAL; 012 pide sensibilidad con al menos dos niveles)
+
+[prior.prevalencia]
+alpha = 1.0            # Dirichlet simetrico sobre las prevalencias de clase. PROVISIONAL
+
+[prior.debil]
+# Pseudo-conteos de cada fila de la matriz de confusion de un anotador LLM: diagonal y fuera de la diagonal.
+# Media a priori de la diagonal = diag / (diag + (K-1)*off). PROVISIONAL. La diagonal > off rompe la
+# simetria de etiquetas (evita el intercambio de clases).
+diag = 2.0
+off = 1.0
+
+[prior.fuerte]
+diag = 20.0
+off = 1.0
+
+[prior.humano]
+# Anotadores de referencia humana (revisores, adjudicacion). PROVISIONAL: se asume que son mas exactos que el LLM,
+# pero NO son verdad (012: la adjudicacion es un anotador mas).
+diag = 20.0
+off = 1.0
+
+[diagnosticos]
+umbral_rhat = 1.05     # PROVISIONAL (R-hat dividido en dos mitades)
+umbral_ess = 100.0     # PROVISIONAL (tamano efectivo minimo por parametro)
+
+[salida]
+dir = "data/processed/calibracion"
+nivel_intervalo = 0.90 # 012 sec. 7: 90 % u 80 %, a fijar. PROVISIONAL
+issues_dir = "docs/issues"
+etiqueta_normal = "PROVISIONAL, SIN VALIDAR"
+etiqueta_piloto = "PILOTO, NO RESULTADO"
+medida_sin_humana = "consistencia_entre_corridas_NO_exactitud"
+medida_con_humana = "exactitud_estimada_con_referencia_humana"
+
+[entrada]
+universo_tareas = "data/processed/tareas_onet_en.parquet"

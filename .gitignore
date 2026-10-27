@@ -26,3 +26,7 @@ data/processed/*
 !data/processed/match_corridas.parquet
 !data/processed/match_sinco_resumen.parquet
 !data/processed/match_cobertura.json
+
+# Microdatos de la ENOE y sus derivados a nivel persona: nunca se publican (013 sec. 11, 020).
+data/raw/enoe/
+data/processed/enoe/

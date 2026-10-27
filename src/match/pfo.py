@@ -42,12 +42,21 @@ def _combinar(pesos_j: np.ndarray, socs_j: list[list[str]], fo: dict[str, float]
 
 
 def agregar_sinco(sims, onet_codes: list[str], tau: float, puente: dict[str, list[str]],
-                  fo: dict[str, float]) -> dict:
-    """sims/onet_codes: conjunto S ordenado por rango (el primero es top-1). Agregaciones de 005 5.7."""
+                  fo: dict[str, float], pesos=None) -> dict:
+    """sims/onet_codes: conjunto S ordenado por rango (el primero es top-1). Agregaciones de 005 5.7.
+
+    pesos (opcional): pesos explicitos por candidato (revision manual); se normalizan a suma 1 y reemplazan al softmax
+    de la agregacion principal (p_ponderada). Sin pesos el comportamiento es el de siempre.
+    """
     sims = np.asarray(sims, dtype=np.float64)
     socs_j = [puente.get(c, []) for c in onet_codes]
     sin_puente = [c for c, s in zip(onet_codes, socs_j) if not s]
-    w_soft = _combinar(softmax(sims, tau), socs_j, fo)
+    if pesos is None:
+        w_princ = softmax(sims, tau)
+    else:
+        w_princ = np.asarray(pesos, dtype=np.float64)
+        w_princ = w_princ / w_princ.sum()
+    w_soft = _combinar(w_princ, socs_j, fo)
     w_uni = _combinar(np.full(len(sims), 1.0 / len(sims)), socs_j, fo)
     top1_socs = [s for s in socs_j[0] if s in fo]
     p_vals = [fo[s] for s in w_uni["socs_con_fo"]]
